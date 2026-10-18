@@ -27,18 +27,25 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
-          path: site
+          path: main-repo
 
-      - name: Checkout development branch into /dev
+      - name: Checkout development branch
         uses: actions/checkout@v4
         with:
           ref: development
-          path: site/dev
+          path: dev-repo
 
-      - name: Prepare site directory
+      - name: Build combined site
         run: |
+          mkdir -p site/dev
+          cp -r main-repo/* site/
+          cp -r dev-repo/* site/dev/
           rm -rf site/.git site/dev/.git site/.github site/dev/.github
           touch site/.nojekyll
+          echo "=== Files in root (main) ==="
+          ls -la site
+          echo "=== Files in /dev (development) ==="
+          ls -la site/dev
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
