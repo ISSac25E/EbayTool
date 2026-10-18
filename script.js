@@ -451,31 +451,43 @@ const collapse = (selector, cmd) => {
   updateGlobalButtons();
 };
 
-const boxes = document.querySelectorAll(".collapse");
-if (window.matchMedia("(min-width: 795px)").matches) {
-  boxes.forEach((box) => {
-    box.classList.add("show");
-  });
-} else {
-  boxes.forEach((box) => {
-    box.classList.remove("show");
-  });
-}
-syncAllCollapseButtonStates();
+const desktopMediaQuery = window.matchMedia("(min-width: 795px)");
 
-window.addEventListener("resize", function () {
+function handleBreakpointChange(e) {
+  const isDesktop = e.matches;
   const boxes = document.querySelectorAll(".collapse");
-  if (window.matchMedia("(min-width: 795px)").matches) {
+  if (isDesktop) {
     boxes.forEach((box) => {
       box.classList.add("show");
     });
   } else {
     boxes.forEach((box) => {
+      if (document.activeElement && box.contains(document.activeElement)) {
+        return;
+      }
       box.classList.remove("show");
     });
   }
   syncAllCollapseButtonStates();
-});
+}
+
+const initialBoxes = document.querySelectorAll(".collapse");
+if (desktopMediaQuery.matches) {
+  initialBoxes.forEach((box) => {
+    box.classList.add("show");
+  });
+} else {
+  initialBoxes.forEach((box) => {
+    box.classList.remove("show");
+  });
+}
+syncAllCollapseButtonStates();
+
+if (desktopMediaQuery.addEventListener) {
+  desktopMediaQuery.addEventListener("change", handleBreakpointChange);
+} else if (desktopMediaQuery.addListener) {
+  desktopMediaQuery.addListener(handleBreakpointChange);
+}
 
 document.getElementById("expand-all-modules").addEventListener("click", () => {
   document.querySelectorAll(".collapse").forEach(box => box.classList.add("show"));
