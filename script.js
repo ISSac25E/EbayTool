@@ -583,6 +583,14 @@ function saveDefault03() {
 
 
 window.onload = function(event) {
+  const versionLink = document.getElementById("version-link");
+  if (versionLink) {
+    const isDev = /\/dev(\/|$)/i.test(window.location.pathname);
+    versionLink.href = isDev
+      ? "https://github.com/ISSac25E/EbayTool/commits/development"
+      : "https://github.com/ISSac25E/EbayTool/commits/main";
+  }
+
   if (localStorage.getItem("PNM.v1") !== null) {
     document.getElementById("reset01").disabled = false;
     document.getElementById(localStorage.getItem("PNM.v1")).checked = true;

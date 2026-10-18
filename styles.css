@@ -300,7 +300,8 @@ button:disabled svg path {
   flex-wrap: wrap;
 }
 
-.global-collapse-controls button {
+.global-collapse-controls button,
+.global-collapse-controls a {
   width: auto;
   flex: 1;
   min-width: 140px;
@@ -313,4 +314,18 @@ button:disabled svg path {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-decoration: none;
+  background: white;
+  color: #333333;
+  padding: 12px 15px;
+  border-radius: 4px;
+  border: 1px solid #d3d3d3;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.global-collapse-controls a:hover,
+.global-collapse-controls a:focus {
+  background: #f3f3f3;
+  border-color: #888;
 }
