@@ -20,30 +20,29 @@ html {
   padding: 15px;
   margin: 0 auto;
   max-width: 1600px;
-  column-gap: 15px;
-  column-count: 3;
-  column-fill: balance;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  align-items: start;
 }
 
 .container > div {
   width: 100%;
   padding: 0px;
   margin: 0px;
-  margin-bottom: 15px;
-  min-width: 300px;
+  min-width: 0;
   overflow: hidden;
-  break-inside: avoid;
 }
 
 @media screen and (max-width: 950px) {
   .container {
-    column-count: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media screen and (max-width: 795px) {
   .container {
-    column-count: 1;
+    grid-template-columns: 1fr;
   }
 }
 
@@ -296,7 +295,10 @@ button:disabled svg path {
 .global-collapse-controls {
   display: flex;
   gap: 10px;
-  margin: 0 0 15px;
+  margin: 15px auto 0;
+  padding: 0 15px;
+  max-width: 1600px;
+  box-sizing: border-box;
   flex-wrap: wrap;
 }
 
@@ -313,4 +315,54 @@ button:disabled svg path {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 10px 15px 30px;
+}
+
+.app-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #888888;
+  font-size: 0.78rem;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+}
+
+.app-footer a:hover,
+.app-footer a:focus {
+  color: #333333;
+}
+
+.app-footer a:hover #rev-text,
+.app-footer a:focus #rev-text {
+  text-decoration: underline;
+}
+
+.env-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.env-badge.env-dev {
+  background-color: #fff3cd;
+  color: #856404;
+  border-color: #ffeeba;
+}
+
+.env-badge.env-prod {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-color: #c8e6c9;
 }

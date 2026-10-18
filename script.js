@@ -81,9 +81,11 @@ function normalizePart(str) {
   return str.replace(/[\s.-]+/g, "").toUpperCase();
 }
 
-function updateOutput01() {
-  document.getElementById("reset01").disabled = false;
-  document.getElementById("save01").disabled = false;
+function updateOutput01(event) {
+  if (event) {
+    document.getElementById("reset01").disabled = false;
+    document.getElementById("save01").disabled = false;
+  }
 
   syncModifiedGroup();
 
@@ -203,14 +205,14 @@ function updateOutput02() {
   } else {
     document.getElementById("SplitOutput").innerHTML = "";
     var text = yearArray.join(" ");
-    for (var i = 0; i < text.length; i += 48) {
+    for (var i = 0; i < text.length; i += 56) {
       const parent = document.getElementById("SplitOutput");
       const span = document.createElement("span");
       span.setAttribute("class", "textarea splitoutputspan");
       span.setAttribute("role", "textbox");
       span.setAttribute("contenteditable", "false");
       span.setAttribute("readonly", "readonly");
-      span.innerText = text.slice(i, i + 48);
+      span.innerText = text.slice(i, i + 56).trim();
       span.addEventListener("mousedown", function () {
         const textSplitOutput = this.innerText;
         try {
@@ -277,13 +279,6 @@ function updateOutput03() {
   }
 }
 
-function updateOutput04() {
-  const input = document.getElementById("input04").textContent.trim();
-  const hasContent = input.length > 0;
-
-  document.getElementById("save04").disabled = !hasContent;
-  document.getElementById("reset04").disabled = !hasContent;
-}
 
 function clickSelector() {
   document.getElementById("option-four").checked = true;
@@ -359,33 +354,6 @@ document.getElementById("output03").addEventListener(
   false
 );
 
-document.getElementById("copy-status04").addEventListener(
-  "mousedown",
-  function () {
-    const text = document.getElementById("input04").innerText;
-    try {
-      navigator.clipboard.writeText(text);
-      document.getElementById("copy-status04").innerText =
-        "Success! Copied to clipboard";
-      document.getElementById("copy-status04").classList.add("success");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("success");
-      }, 1200);
-    } catch (err) {
-      document.getElementById("copy-status04").innerText =
-        "Failed to copy!";
-      document.getElementById("copy-status04").classList.add("failed");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("failed");
-      }, 1200);
-    }
-  },
-  false
-);
 
 document
   .getElementById("inputform01")
@@ -406,21 +374,18 @@ document
   .getElementById("inputform03")
   .addEventListener("input", updateOutput03);
 
-document.getElementById("input04").addEventListener("change", updateOutput04);
-
-document.getElementById("input04").addEventListener("input", updateOutput04);
 
 document.getElementById("option-four-custom").addEventListener("change", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-four-custom").addEventListener("input", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-four-custom").addEventListener("focus", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-4-custom").addEventListener("change", () => {
   clickSelector2();
@@ -439,7 +404,7 @@ const modifiedMasterToggle = document.getElementById("section-two");
 if (modifiedMasterToggle) {
   modifiedMasterToggle.addEventListener("change", function () {
     syncModifiedGroup();
-    updateOutput01();
+    updateOutput01(true);
   });
 }
 
@@ -486,31 +451,43 @@ const collapse = (selector, cmd) => {
   updateGlobalButtons();
 };
 
-const boxes = document.querySelectorAll(".collapse");
-if (window.matchMedia("(min-width: 795px)").matches) {
-  boxes.forEach((box) => {
-    box.classList.add("show");
-  });
-} else {
-  boxes.forEach((box) => {
-    box.classList.remove("show");
-  });
-}
-syncAllCollapseButtonStates();
+const desktopMediaQuery = window.matchMedia("(min-width: 795px)");
 
-window.addEventListener("resize", function () {
+function handleBreakpointChange(e) {
+  const isDesktop = e.matches;
   const boxes = document.querySelectorAll(".collapse");
-  if (window.matchMedia("(min-width: 795px)").matches) {
+  if (isDesktop) {
     boxes.forEach((box) => {
       box.classList.add("show");
     });
   } else {
     boxes.forEach((box) => {
+      if (document.activeElement && box.contains(document.activeElement)) {
+        return;
+      }
       box.classList.remove("show");
     });
   }
   syncAllCollapseButtonStates();
-});
+}
+
+const initialBoxes = document.querySelectorAll(".collapse");
+if (desktopMediaQuery.matches) {
+  initialBoxes.forEach((box) => {
+    box.classList.add("show");
+  });
+} else {
+  initialBoxes.forEach((box) => {
+    box.classList.remove("show");
+  });
+}
+syncAllCollapseButtonStates();
+
+if (desktopMediaQuery.addEventListener) {
+  desktopMediaQuery.addEventListener("change", handleBreakpointChange);
+} else if (desktopMediaQuery.addListener) {
+  desktopMediaQuery.addListener(handleBreakpointChange);
+}
 
 document.getElementById("expand-all-modules").addEventListener("click", () => {
   document.querySelectorAll(".collapse").forEach(box => box.classList.add("show"));
@@ -582,32 +559,6 @@ function resetForm3() {
   document.getElementById("reset03").disabled = true;
   document.getElementById("save03").disabled = true;
 }
-function resetForm4() {
-  document.getElementById("input04").textContent = "";
-
-  var arr = [];
-  for (var i = 0; i < localStorage.length; i++) {
-    if (localStorage.key(i).substring(0, 4) == "Text") {
-      arr.push(localStorage.key(i));
-    }
-  }
-  for (var i = 0; i < arr.length; i++) {
-    localStorage.removeItem(arr[i]);
-  }
-
-  document.getElementById("copy-status04").innerText =
-        "Cleared!";
-      document.getElementById("copy-status04").classList.add("failed");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("failed");
-        document.getElementById("input04").focus();
-      }, 1200);
-
-  document.getElementById("reset04").disabled = true;
-  document.getElementById("save04").disabled = true;
-}
 
 
 function saveDefault01() {
@@ -626,6 +577,7 @@ function saveDefault01() {
   }
 
   document.getElementById("save01").disabled = true;
+  document.getElementById("reset01").disabled = false;
 }
 function saveDefault03() {
   var Default = {};
@@ -643,29 +595,48 @@ function saveDefault03() {
 
   document.getElementById("save03").disabled = true;
 }
-function saveDefault04() {
-  var Default = {};
-  Default.v1 = document.getElementById("input04").textContent;
 
-  for (const [key, value] of Object.entries(Default)) {
-    localStorage.setItem("Text." + key, value);
+
+function syncEnvironmentTag() {
+  const versionLink = document.getElementById("version-link");
+  const envBadge = document.getElementById("env-badge");
+  const revText = document.getElementById("rev-text");
+
+  if (revText && revText.textContent.includes("__BUILD_REV__")) {
+    revText.textContent = "Rev Local";
   }
 
-  document.getElementById("copy-status04").innerText =
-        "Saved!";
-      document.getElementById("copy-status04").classList.add("success");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("success");
-        document.getElementById("input04").focus();
-      }, 1200);
+  if (versionLink) {
+    const isDev = /\/dev(\/|$)/i.test(window.location.pathname) ||
+                  window.location.hostname === "localhost" ||
+                  window.location.hostname === "127.0.0.1" ||
+                  window.location.protocol === "file:";
 
-  document.getElementById("save04").disabled = true;
-  document.getElementById("reset04").disabled = false;
+    if (envBadge && (envBadge.textContent === "__ENV_BADGE__" || isDev)) {
+      envBadge.textContent = isDev ? "DEV" : "PROD";
+      envBadge.className = `env-badge ${isDev ? "env-dev" : "env-prod"}`;
+    }
+
+    const currentHref = versionLink.getAttribute("href") || "";
+    if (currentHref.includes("__BRANCH__") || isDev) {
+      const targetUrl = isDev
+        ? "https://github.com/ISSac25E/EbayTool/commits/development"
+        : "https://github.com/ISSac25E/EbayTool/commits/main";
+      const targetLabel = isDev
+        ? "View development commits on GitHub"
+        : "View production commits on GitHub";
+
+      versionLink.href = targetUrl;
+      versionLink.title = targetLabel;
+      versionLink.setAttribute("aria-label", targetLabel);
+    }
+  }
 }
+syncEnvironmentTag();
 
 window.onload = function(event) {
+  syncEnvironmentTag();
+
   if (localStorage.getItem("PNM.v1") !== null) {
     document.getElementById("reset01").disabled = false;
     document.getElementById(localStorage.getItem("PNM.v1")).checked = true;
@@ -714,10 +685,6 @@ window.onload = function(event) {
     document.getElementById("section-3").checked = JSON.parse(localStorage.getItem("TG.v7"));
   }
 
-  if (localStorage.getItem("Text.v1") !== null) {
-    document.getElementById("reset04").disabled = false;
-    document.getElementById("input04").textContent = localStorage.getItem("Text.v1");
-  }
 
   updateOutput01();
   syncAllCollapseButtonStates();

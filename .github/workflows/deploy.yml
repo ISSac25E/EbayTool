@@ -37,15 +37,34 @@ jobs:
 
       - name: Build combined site
         run: |
+          # 1. Capture dynamic commit timestamps from each branch
+          MAIN_REV=$(git -C main-repo log -1 --format=%ad --date=format:'%Y.%m.%d-%H%M')
+          DEV_REV=$(git -C dev-repo log -1 --format=%ad --date=format:'%Y.%m.%d-%H%M')
+          MAIN_REV=${MAIN_REV:-$(date -u +"%Y.%m.%d-%H%M")}
+          DEV_REV=${DEV_REV:-$(date -u +"%Y.%m.%d-%H%M")}
+
+          # 2. Assemble site directory
           mkdir -p site/dev
           cp -r main-repo/* site/
           cp -r dev-repo/* site/dev/
           rm -rf site/.git site/dev/.git site/.github site/dev/.github
           touch site/.nojekyll
-          echo "=== Files in root (main) ==="
-          ls -la site
-          echo "=== Files in /dev (development) ==="
-          ls -la site/dev
+
+          # 3. Automatically inject revision, cache-busting version, and environment badges
+          sed -i "s/__BUILD_REV__/$DEV_REV/g" site/dev/index.html
+          sed -i "s/__ENV_BADGE__/DEV/g" site/dev/index.html
+          sed -i "s/__ENV_CLASS__/env-dev/g" site/dev/index.html
+          sed -i "s/__BRANCH__/development/g" site/dev/index.html
+
+          sed -i "s/__BUILD_REV__/$MAIN_REV/g" site/index.html
+          sed -i "s/__ENV_BADGE__/PROD/g" site/index.html
+          sed -i "s/__ENV_CLASS__/env-prod/g" site/index.html
+          sed -i "s/__BRANCH__/main/g" site/index.html
+
+          echo "=== Injected Dev Site (site/dev/index.html) ==="
+          grep -E "env-badge|rev-text|script.js\?v=|styles.css\?v=" site/dev/index.html || true
+          echo "=== Injected Main Site (site/index.html) ==="
+          grep -E "env-badge|rev-text|script.js\?v=|styles.css\?v=" site/index.html || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
