@@ -277,13 +277,6 @@ function updateOutput03() {
   }
 }
 
-function updateOutput04() {
-  const input = document.getElementById("input04").textContent.trim();
-  const hasContent = input.length > 0;
-
-  document.getElementById("save04").disabled = !hasContent;
-  document.getElementById("reset04").disabled = !hasContent;
-}
 
 function clickSelector() {
   document.getElementById("option-four").checked = true;
@@ -359,33 +352,6 @@ document.getElementById("output03").addEventListener(
   false
 );
 
-document.getElementById("copy-status04").addEventListener(
-  "mousedown",
-  function () {
-    const text = document.getElementById("input04").innerText;
-    try {
-      navigator.clipboard.writeText(text);
-      document.getElementById("copy-status04").innerText =
-        "Success! Copied to clipboard";
-      document.getElementById("copy-status04").classList.add("success");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("success");
-      }, 1200);
-    } catch (err) {
-      document.getElementById("copy-status04").innerText =
-        "Failed to copy!";
-      document.getElementById("copy-status04").classList.add("failed");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("failed");
-      }, 1200);
-    }
-  },
-  false
-);
 
 document
   .getElementById("inputform01")
@@ -406,9 +372,6 @@ document
   .getElementById("inputform03")
   .addEventListener("input", updateOutput03);
 
-document.getElementById("input04").addEventListener("change", updateOutput04);
-
-document.getElementById("input04").addEventListener("input", updateOutput04);
 
 document.getElementById("option-four-custom").addEventListener("change", () => {
   clickSelector();
@@ -582,32 +545,6 @@ function resetForm3() {
   document.getElementById("reset03").disabled = true;
   document.getElementById("save03").disabled = true;
 }
-function resetForm4() {
-  document.getElementById("input04").textContent = "";
-
-  var arr = [];
-  for (var i = 0; i < localStorage.length; i++) {
-    if (localStorage.key(i).substring(0, 4) == "Text") {
-      arr.push(localStorage.key(i));
-    }
-  }
-  for (var i = 0; i < arr.length; i++) {
-    localStorage.removeItem(arr[i]);
-  }
-
-  document.getElementById("copy-status04").innerText =
-        "Cleared!";
-      document.getElementById("copy-status04").classList.add("failed");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("failed");
-        document.getElementById("input04").focus();
-      }, 1200);
-
-  document.getElementById("reset04").disabled = true;
-  document.getElementById("save04").disabled = true;
-}
 
 
 function saveDefault01() {
@@ -643,27 +580,7 @@ function saveDefault03() {
 
   document.getElementById("save03").disabled = true;
 }
-function saveDefault04() {
-  var Default = {};
-  Default.v1 = document.getElementById("input04").textContent;
 
-  for (const [key, value] of Object.entries(Default)) {
-    localStorage.setItem("Text." + key, value);
-  }
-
-  document.getElementById("copy-status04").innerText =
-        "Saved!";
-      document.getElementById("copy-status04").classList.add("success");
-      setTimeout(function () {
-        document.getElementById("copy-status04").innerText =
-          "Click to copy";
-        document.getElementById("copy-status04").classList.remove("success");
-        document.getElementById("input04").focus();
-      }, 1200);
-
-  document.getElementById("save04").disabled = true;
-  document.getElementById("reset04").disabled = false;
-}
 
 window.onload = function(event) {
   if (localStorage.getItem("PNM.v1") !== null) {
@@ -714,10 +631,6 @@ window.onload = function(event) {
     document.getElementById("section-3").checked = JSON.parse(localStorage.getItem("TG.v7"));
   }
 
-  if (localStorage.getItem("Text.v1") !== null) {
-    document.getElementById("reset04").disabled = false;
-    document.getElementById("input04").textContent = localStorage.getItem("Text.v1");
-  }
 
   updateOutput01();
   syncAllCollapseButtonStates();
