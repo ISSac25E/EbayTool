@@ -1,0 +1,316 @@
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;1,400&display=swap");
+
+body {
+  margin: 0px;
+  font-family: "Montserrat", sans-serif;
+}
+
+html {
+  box-sizing: border-box;
+  background: #dfdfdf;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+.container {
+  padding: 15px;
+  margin: 0 auto;
+  max-width: 1600px;
+  column-gap: 15px;
+  column-count: 3;
+  column-fill: balance;
+}
+
+.container > div {
+  width: 100%;
+  padding: 0px;
+  margin: 0px;
+  margin-bottom: 15px;
+  min-width: 300px;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+@media screen and (max-width: 950px) {
+  .container {
+    column-count: 2;
+  }
+}
+
+@media screen and (max-width: 795px) {
+  .container {
+    column-count: 1;
+  }
+}
+
+.collapse > div {
+  background: white;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  position: relative;
+  border-radius: 5px;
+  user-select: none;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.collapse > div:last-child {
+  margin-bottom: 0;
+}
+
+.collapse > div:first-child {
+  border-top-left-radius: 0px;
+  border-top-right-radius: 0px;
+}
+
+input,
+button,
+textarea,
+select,
+label {
+  display: block;
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 4px;
+  border: 1px solid #d3d3d3;
+  outline: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 16px;
+}
+
+.form > label {
+  border: 0 !important;
+  padding: 0 !important;
+  margin: 10px 0;
+}
+
+.form > label:first-child {
+  margin-top: 0;
+}
+
+input:focus,
+select:focus,
+.radio-group label:focus {
+  border-color: #888;
+}
+
+.form {
+  clear: both;
+}
+
+.collapse > * > .form:not(:last-child) {
+  margin-bottom: 15px;
+}
+
+.form--disabled input,
+.form--disabled textarea,
+.form--disabled select {
+  padding-left: 0;
+  padding-top: 4px;
+  border: 0 solid #efefef;
+  background: white;
+  height: auto;
+  color: #31373b;
+  font-size: 0.8em;
+  transition: all 0.2s ease-in-out;
+}
+
+.radio-group {
+  display: flex;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.8em;
+  user-select: none;
+  margin: 10px 0;
+}
+.radio-group:last-child {
+  margin-bottom: 0;
+}
+
+.radio-group > input[type="radio"],
+.radio-group > input[type="checkbox"] {
+  display: none;
+}
+
+.radio-group > label,
+.radio-group > input {
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+.radio-group label:first-of-type {
+  margin-left: 0px;
+}
+
+.radio-group label:last-of-type {
+  margin-right: 0px;
+  min-width: 110px;
+}
+
+input[type="radio"]:checked + label,
+input[type="input"],
+input[type="checkbox"]:checked + label {
+  box-shadow: inset 0px 0px 0px 3px #1ca12e;
+}
+
+.duplicate-warning {
+  box-shadow: inset 0px 0px 0px 3px orange !important;
+}
+
+.text-muted {
+  color: #6c757d;
+  background: #ffffff;
+  font-size: 80%;
+  font-weight: 400;
+  user-select: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 3px;
+  transition: color 0.3s, background 0.3s;
+}
+
+.text-muted.success {
+  color: white !important;
+  background: #1ca12e !important;
+}
+
+.text-muted.failed {
+  color: white !important;
+  background: #802416 !important;
+}
+
+.textarea {
+  display: block;
+  background: #f3f3f3;
+  width: 100%;
+  overflow: hidden;
+  min-height: 40px;
+  margin: 10px 0;
+  padding: 12px 15px;
+  border-radius: 4px;
+  border: 1px solid #efefef;
+  outline: none;
+  cursor: pointer;
+}
+
+.collapse {
+  max-height: 0px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+.collapse.show {
+  max-height: 99em;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.header button {
+  text-transform: uppercase;
+  color: #333333;
+  background: white;
+  border-radius: 3px;
+  border: 0px;
+  transition: background 0.3s;
+  padding: 0;
+  margin: 7px;
+  margin-left: 0px;
+  width: 35px;
+  text-align: center;
+}
+
+svg path {
+  fill: #333333;
+}
+
+svg .cls-1 {
+  fill: none;
+}
+
+.btn-save,
+.btn-save svg path {
+  background: green;
+  fill: #2472A8;
+}
+
+.btn-reset,
+.btn-reset svg path {
+  background: #ffffff;
+  fill: #6D0000;
+}
+
+button:hover,
+button:focus,
+svg.cls-1 {
+  background: #f3f3f3;
+}
+
+button > svg {
+  pointer-events: none;
+  vertical-align: middle;
+}
+
+button:disabled,
+button:disabled svg path {
+  background: #bbbbbb;
+  fill: #333333;
+}
+
+.container > div:not(:has(.show)) > .header {
+  border-radius: 5px !important;
+  transition: border-radius 0.25s ease-out;
+}
+
+.header {
+  display: inline-flex;
+  width: 100%;
+  background: #333333;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+.header h1 {
+  font-size: 1.2em;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin: 0 auto;
+  width: 100%;
+  color: white;
+  text-align: left;
+  padding: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#inputform01 input[type="checkbox"]:disabled + label {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.global-collapse-controls {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 15px;
+  flex-wrap: wrap;
+}
+
+.global-collapse-controls button {
+  width: auto;
+  flex: 1;
+  min-width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
