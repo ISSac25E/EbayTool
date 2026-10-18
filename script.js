@@ -587,11 +587,28 @@ function saveDefault03() {
 
 window.onload = function(event) {
   const versionLink = document.getElementById("version-link");
+  const envBadge = document.getElementById("env-badge");
   if (versionLink) {
-    const isDev = /\/dev(\/|$)/i.test(window.location.pathname);
-    versionLink.href = isDev
+    const isDev = /\/dev(\/|$)/i.test(window.location.pathname) ||
+                  window.location.hostname === "localhost" ||
+                  window.location.hostname === "127.0.0.1" ||
+                  window.location.protocol === "file:";
+
+    if (envBadge) {
+      envBadge.textContent = isDev ? "DEV" : "PROD";
+      envBadge.className = `env-badge ${isDev ? "env-dev" : "env-prod"}`;
+    }
+
+    const targetUrl = isDev
       ? "https://github.com/ISSac25E/EbayTool/commits/development"
       : "https://github.com/ISSac25E/EbayTool/commits/main";
+    const targetLabel = isDev
+      ? "View development commits on GitHub"
+      : "View production commits on GitHub";
+
+    versionLink.href = targetUrl;
+    versionLink.title = targetLabel;
+    versionLink.setAttribute("aria-label", targetLabel);
   }
 
   if (localStorage.getItem("PNM.v1") !== null) {
