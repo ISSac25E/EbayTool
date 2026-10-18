@@ -81,9 +81,11 @@ function normalizePart(str) {
   return str.replace(/[\s.-]+/g, "").toUpperCase();
 }
 
-function updateOutput01() {
-  document.getElementById("reset01").disabled = false;
-  document.getElementById("save01").disabled = false;
+function updateOutput01(event) {
+  if (event) {
+    document.getElementById("reset01").disabled = false;
+    document.getElementById("save01").disabled = false;
+  }
 
   syncModifiedGroup();
 
@@ -375,15 +377,15 @@ document
 
 document.getElementById("option-four-custom").addEventListener("change", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-four-custom").addEventListener("input", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-four-custom").addEventListener("focus", () => {
   clickSelector();
-  updateOutput01();
+  updateOutput01(true);
 });
 document.getElementById("option-4-custom").addEventListener("change", () => {
   clickSelector2();
@@ -402,7 +404,7 @@ const modifiedMasterToggle = document.getElementById("section-two");
 if (modifiedMasterToggle) {
   modifiedMasterToggle.addEventListener("change", function () {
     syncModifiedGroup();
-    updateOutput01();
+    updateOutput01(true);
   });
 }
 
@@ -563,6 +565,7 @@ function saveDefault01() {
   }
 
   document.getElementById("save01").disabled = true;
+  document.getElementById("reset01").disabled = false;
 }
 function saveDefault03() {
   var Default = {};
