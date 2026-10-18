@@ -300,8 +300,7 @@ button:disabled svg path {
   flex-wrap: wrap;
 }
 
-.global-collapse-controls button,
-.global-collapse-controls a {
+.global-collapse-controls button {
   width: auto;
   flex: 1;
   min-width: 140px;
@@ -314,18 +313,23 @@ button:disabled svg path {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-decoration: none;
-  background: white;
-  color: #333333;
-  padding: 12px 15px;
-  border-radius: 4px;
-  border: 1px solid #d3d3d3;
-  font-size: 16px;
-  box-sizing: border-box;
 }
 
-.global-collapse-controls a:hover,
-.global-collapse-controls a:focus {
-  background: #f3f3f3;
-  border-color: #888;
+.app-footer {
+  text-align: center;
+  padding: 10px 15px 30px;
+}
+
+.app-footer a {
+  color: #888888;
+  font-size: 0.8rem;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  transition: color 0.2s ease;
+}
+
+.app-footer a:hover,
+.app-footer a:focus {
+  color: #333333;
+  text-decoration: underline;
 }
