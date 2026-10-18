@@ -597,31 +597,45 @@ function saveDefault03() {
 }
 
 
-window.onload = function(event) {
+function syncEnvironmentTag() {
   const versionLink = document.getElementById("version-link");
   const envBadge = document.getElementById("env-badge");
+  const revText = document.getElementById("rev-text");
+
+  if (revText && revText.textContent.includes("__BUILD_REV__")) {
+    revText.textContent = "Rev Local";
+  }
+
   if (versionLink) {
     const isDev = /\/dev(\/|$)/i.test(window.location.pathname) ||
                   window.location.hostname === "localhost" ||
                   window.location.hostname === "127.0.0.1" ||
                   window.location.protocol === "file:";
 
-    if (envBadge) {
+    if (envBadge && (envBadge.textContent === "__ENV_BADGE__" || isDev)) {
       envBadge.textContent = isDev ? "DEV" : "PROD";
       envBadge.className = `env-badge ${isDev ? "env-dev" : "env-prod"}`;
     }
 
-    const targetUrl = isDev
-      ? "https://github.com/ISSac25E/EbayTool/commits/development"
-      : "https://github.com/ISSac25E/EbayTool/commits/main";
-    const targetLabel = isDev
-      ? "View development commits on GitHub"
-      : "View production commits on GitHub";
+    const currentHref = versionLink.getAttribute("href") || "";
+    if (currentHref.includes("__BRANCH__") || isDev) {
+      const targetUrl = isDev
+        ? "https://github.com/ISSac25E/EbayTool/commits/development"
+        : "https://github.com/ISSac25E/EbayTool/commits/main";
+      const targetLabel = isDev
+        ? "View development commits on GitHub"
+        : "View production commits on GitHub";
 
-    versionLink.href = targetUrl;
-    versionLink.title = targetLabel;
-    versionLink.setAttribute("aria-label", targetLabel);
+      versionLink.href = targetUrl;
+      versionLink.title = targetLabel;
+      versionLink.setAttribute("aria-label", targetLabel);
+    }
   }
+}
+syncEnvironmentTag();
+
+window.onload = function(event) {
+  syncEnvironmentTag();
 
   if (localStorage.getItem("PNM.v1") !== null) {
     document.getElementById("reset01").disabled = false;
