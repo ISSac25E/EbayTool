@@ -203,14 +203,14 @@ function updateOutput02() {
   } else {
     document.getElementById("SplitOutput").innerHTML = "";
     var text = yearArray.join(" ");
-    for (var i = 0; i < text.length; i += 48) {
+    for (var i = 0; i < text.length; i += 56) {
       const parent = document.getElementById("SplitOutput");
       const span = document.createElement("span");
       span.setAttribute("class", "textarea splitoutputspan");
       span.setAttribute("role", "textbox");
       span.setAttribute("contenteditable", "false");
       span.setAttribute("readonly", "readonly");
-      span.innerText = text.slice(i, i + 48);
+      span.innerText = text.slice(i, i + 56).trim();
       span.addEventListener("mousedown", function () {
         const textSplitOutput = this.innerText;
         try {
