@@ -1,10 +1,10 @@
-name: Deploy Main and Dev to GitHub Pages
+name: Deploy All Branches to GitHub Pages
 
 on:
   push:
     branches:
-      - main
-      - development
+      - '**'
+  delete:
   workflow_dispatch:
 
 permissions:
@@ -23,48 +23,69 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: main
-          path: main-repo
+          fetch-depth: 0
 
-      - name: Checkout development branch
-        uses: actions/checkout@v4
-        with:
-          ref: development
-          path: dev-repo
-
-      - name: Build combined site
+      - name: Build combined site for all branches
         run: |
-          # 1. Capture dynamic commit timestamps from each branch
-          MAIN_REV=$(git -C main-repo log -1 --format=%ad --date=format:'%Y.%m.%d-%H%M')
-          DEV_REV=$(git -C dev-repo log -1 --format=%ad --date=format:'%Y.%m.%d-%H%M')
-          MAIN_REV=${MAIN_REV:-$(date -u +"%Y.%m.%d-%H%M")}
-          DEV_REV=${DEV_REV:-$(date -u +"%Y.%m.%d-%H%M")}
+          # Ensure all remote branch refs are fetched and up-to-date
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' --prune
 
-          # 2. Assemble site directory
-          mkdir -p site/dev
-          cp -r main-repo/* site/
-          cp -r dev-repo/* site/dev/
-          rm -rf site/.git site/dev/.git site/.github site/dev/.github
+          mkdir -p site
           touch site/.nojekyll
 
-          # 3. Automatically inject revision, cache-busting version, and environment badges
-          sed -i "s/__BUILD_REV__/$DEV_REV/g" site/dev/index.html
-          sed -i "s/__ENV_BADGE__/DEV/g" site/dev/index.html
-          sed -i "s/__ENV_CLASS__/env-dev/g" site/dev/index.html
-          sed -i "s/__BRANCH__/development/g" site/dev/index.html
+          # Collect all remote branches (excluding HEAD and gh-pages), placing main first
+          BRANCHES=$(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/origin/ | grep -vE '^(HEAD|gh-pages)$')
+          ORDERED_BRANCHES=""
+          if echo "$BRANCHES" | grep -qx "main"; then
+            ORDERED_BRANCHES="main"
+          fi
+          for b in $BRANCHES; do
+            if [ "$b" != "main" ]; then
+              ORDERED_BRANCHES="$ORDERED_BRANCHES $b"
+            fi
+          done
 
-          sed -i "s/__BUILD_REV__/$MAIN_REV/g" site/index.html
-          sed -i "s/__ENV_BADGE__/PROD/g" site/index.html
-          sed -i "s/__ENV_CLASS__/env-prod/g" site/index.html
-          sed -i "s/__BRANCH__/main/g" site/index.html
+          for BRANCH in $ORDERED_BRANCHES; do
+            echo "Processing branch: $BRANCH"
 
-          echo "=== Injected Dev Site (site/dev/index.html) ==="
-          grep -E "env-badge|rev-text|script.js\?v=|styles.css\?v=" site/dev/index.html || true
-          echo "=== Injected Main Site (site/index.html) ==="
-          grep -E "env-badge|rev-text|script.js\?v=|styles.css\?v=" site/index.html || true
+            # 1. Determine target directory and environment badge settings
+            if [ "$BRANCH" = "main" ]; then
+              TARGET_DIR="site"
+              ENV_BADGE="PROD"
+              ENV_CLASS="env-prod"
+            elif [ "$BRANCH" = "development" ]; then
+              TARGET_DIR="site/dev"
+              ENV_BADGE="DEV"
+              ENV_CLASS="env-dev"
+            else
+              TARGET_DIR="site/$BRANCH"
+              ENV_BADGE="$BRANCH"
+              ENV_CLASS="env-dev"
+            fi
+
+            # 2. Extract branch contents into target directory
+            mkdir -p "$TARGET_DIR"
+            git archive "origin/$BRANCH" | tar -x -C "$TARGET_DIR"
+            rm -rf "$TARGET_DIR/.github" "$TARGET_DIR/.gitignore"
+
+            # 3. Capture dynamic commit timestamp for this branch
+            REV=$(git log -1 --format=%ad --date=format:'%Y.%m.%d-%H%M' "origin/$BRANCH")
+            REV=${REV:-$(date -u +"%Y.%m.%d-%H%M")}
+
+            # 4. Inject revision, cache-busting version, and environment badges
+            if [ -f "$TARGET_DIR/index.html" ]; then
+              sed -i "s|__BUILD_REV__|$REV|g" "$TARGET_DIR/index.html"
+              sed -i "s|__ENV_BADGE__|$ENV_BADGE|g" "$TARGET_DIR/index.html"
+              sed -i "s|__ENV_CLASS__|$ENV_CLASS|g" "$TARGET_DIR/index.html"
+              sed -i "s|__BRANCH__|$BRANCH|g" "$TARGET_DIR/index.html"
+
+              echo "=== Injected Site ($TARGET_DIR/index.html) ==="
+              grep -E "env-badge|rev-text|script.js\?v=|styles.css\?v=" "$TARGET_DIR/index.html" || true
+            fi
+          done
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -77,3 +98,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        env:
+          GITHUB_SHA: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
