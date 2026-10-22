@@ -8,6 +8,12 @@
 </head>
 <body>
 <div class="global-collapse-controls">
+  <button type="button" id="btn-open-bm-modal" class="btn-global-bookmarklet" aria-label="eBay Bookmarklet Assistant" title="Install or setup the eBay Bookmarklet">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+    </svg>
+    <span>eBay Bookmarklet</span>
+  </button>
   <button type="button" id="expand-all-modules" aria-label="Expand all sections" title="Expand all sections">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="#0D0D0D"></path>
@@ -97,6 +103,15 @@
             <span class="textarea" id="output01" role="textbox" contenteditable="false" readonly="readonly"></span>
           </div>
           <div class="card-text"><small class="text-muted" id="copy-status01">Click Output to copy</small></div>
+          <div class="mpn-output-actions">
+            <button type="button" id="btn-copy-ebay-payload" class="btn-copy-ebay-simple" title="Copy formatted part numbers for the eBay Bookmarklet">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy for eBay</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -199,5 +214,67 @@
 </footer>
 
   <script src="script.js?v=__BUILD_REV__"></script>
+
+<div id="bookmarklet-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="bm-modal-title">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <span class="modal-icon">⚡</span>
+        <h2 id="bm-modal-title" class="modal-title">eBay Auto-Fill Bookmarklet</h2>
+      </div>
+      <button type="button" id="btn-close-bm-modal" class="btn-modal-close" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <!-- Desktop View (Default) -->
+      <div id="bm-desktop-install" class="bm-install-view">
+        <p class="bm-lead">Quickly fills part numbers directly into your active eBay listing in one click.</p>
+        <div class="bm-drag-box">
+          <div class="bm-drag-hint">Drag this button up to your Bookmarks Bar:</div>
+          <a id="ebay-bookmarklet-link" class="bookmarklet-drag-btn" href="#" draggable="true" title="Drag to Bookmarks bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Fill eBay Listing</span>
+          </a>
+          <div class="bm-shortcut-hint">Bookmarks bar hidden? Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> (or <kbd>&#8984;</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> on Mac)</div>
+        </div>
+        <div class="bm-workflow-steps">
+          <div class="bm-step"><span class="bm-step-num">1</span> Click <b>Copy for eBay</b> in the tool</div>
+          <div class="bm-step"><span class="bm-step-num">2</span> Switch to your eBay listing page</div>
+          <div class="bm-step"><span class="bm-step-num">3</span> Click <b>Fill eBay Listing</b> on your bookmarks bar</div>
+        </div>
+        <div class="bm-fallback-box">
+          <button type="button" id="btn-copy-bm-code" class="btn-copy-code-minimal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy Bookmarklet Code</span>
+          </button>
+        </div>
+      </div>
+      <!-- Mobile View (Shown when mobile detected) -->
+      <div id="bm-mobile-install" class="bm-install-view" style="display: none;">
+        <div class="mobile-notice-box">
+          <div class="mobile-notice-icon">📱</div>
+          <h3 class="mobile-notice-title">Desktop Browser Recommended</h3>
+          <p class="mobile-notice-text">Mobile browsers (iOS Safari, Android Chrome) do not support dragging bookmarklets to a bookmarks bar.</p>
+          <p class="mobile-notice-text">For the easiest 1-click auto-fill, open this page on a <b>Desktop or Laptop computer</b>.</p>
+        </div>
+        <details class="mobile-manual-accordion">
+          <summary>Need it on mobile? Tap for manual instructions</summary>
+          <div class="mobile-manual-body">
+            <ol class="mobile-steps">
+              <li>Tap <b>Copy Bookmarklet Code</b> below.</li>
+              <li>Bookmark this page (or any webpage) in your mobile browser.</li>
+              <li>Edit the bookmark: name it <b>Fill eBay Listing</b>, delete its address/URL, and paste the code.</li>
+              <li>On your eBay listing page, type <b>Fill eBay Listing</b> in the address bar and select the bookmark to run.</li>
+            </ol>
+            <button type="button" id="btn-copy-bm-code-mobile" class="btn-copy-code-minimal mobile-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy Bookmarklet Code</span>
+            </button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
