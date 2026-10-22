@@ -2,7 +2,7 @@
  * EbayTool Assistant - Universal eBay Listing Bookmarklet
  * Engine Version: 1.1.0
  * Protocol Version: 1.0
- * Name: ⭐️ Fill eBay Listing v1.1.0
+ * Name: Fill eBay Listing v1.1.0
  *
  * Lightweight, CSP-compliant, mission-ready auto-fill runner for eBay listings.
  * - Native eBay Seller Hub fake-menu-button / dropdown support with custom option commit
@@ -442,7 +442,7 @@
 
     for (let i = 0; i < toAdd.length; i++) {
       const val = toAdd[i];
-      showToast('⭐️ Adding Part Numbers', `[${i + 1}/${toAdd.length}] Typing: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`);
+      showToast('Adding Part Numbers', `[${i + 1}/${toAdd.length}] Typing: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`);
 
       // 1. Focus search input and clear it
       searchInput.focus();
@@ -502,7 +502,7 @@
 
     for (let i = 0; i < toAdd.length; i++) {
       const val = toAdd[i];
-      showToast('⭐️ Adding Part Numbers', `[${i + 1}/${toAdd.length}] Entering: "${val.slice(0, 22)}..."`);
+      showToast('Adding Part Numbers', `[${i + 1}/${toAdd.length}] Entering: "${val.slice(0, 22)}..."`);
 
       input.focus();
       await sleep(60);
@@ -541,7 +541,7 @@
 
   // 9. Main Workflow Runner
   async function run() {
-    showToast('⭐️ eBay Assistant', 'Reading clipboard content...');
+    showToast('eBay Assistant', 'Reading clipboard content...');
 
     let text = '';
     try {
@@ -574,7 +574,7 @@
       return;
     }
 
-    showToast('⭐️ eBay Assistant', 'Checking existing part numbers...');
+    showToast('eBay Assistant', 'Checking existing part numbers...');
     const targetConfig = payload.target || {};
     const target = locateTargetField(targetConfig);
 
@@ -613,7 +613,7 @@
     }
 
     // Step 4: Add new items
-    showToast('⭐️ eBay Assistant', `Adding ${toAdd.length} new part number(s)... (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)`);
+    showToast('eBay Assistant', `Adding ${toAdd.length} new part number(s)... (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)`);
 
     let committedCount = 0;
     if (target.type === 'menu') {
