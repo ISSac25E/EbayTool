@@ -81,77 +81,80 @@ function normalizePart(str) {
   return str.replace(/[\s.-]+/g, "").toUpperCase();
 }
 
-function updateOutput01(event) {
-  if (event) {
-    document.getElementById("reset01").disabled = false;
-    document.getElementById("save01").disabled = false;
-  }
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
-  syncModifiedGroup();
-
-  document.querySelectorAll(".duplicate-warning").forEach(el => {
-    el.classList.remove("duplicate-warning");
+function syncMpnRowButtons() {
+  const mpnInputList = document.getElementById("mpn-input-list");
+  if (!mpnInputList) return;
+  const rows = mpnInputList.querySelectorAll(".mpn-row");
+  rows.forEach(row => {
+    let delBtn = row.querySelector(".btn-row-delete");
+    if (rows.length <= 1) {
+      if (delBtn) delBtn.remove();
+    } else {
+      if (!delBtn) {
+        delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "btn-row-action btn-row-delete";
+        delBtn.title = "Delete row";
+        delBtn.setAttribute("aria-label", "Delete row");
+        delBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+        row.appendChild(delBtn);
+      }
+    }
   });
+}
 
-  const mainInput = document.getElementById("input01").value.trim();
+function createMpnRow(initialValue = "") {
+  const row = document.createElement("div");
+  row.className = "mpn-row";
 
-  const sep =
-    " " +
-    document.querySelector('#inputform01 input[name="selector"]:checked')
-      .value +
-    " ";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "mpn-input";
+  input.placeholder = "ZSB 5GM.819.203B";
+  input.value = initialValue;
 
-  if (!mainInput) {
-    document.getElementById("output01").innerText = "";
-    return;
-  }
+  const btnDelete = document.createElement("button");
+  btnDelete.type = "button";
+  btnDelete.className = "btn-row-action btn-row-delete";
+  btnDelete.title = "Delete row";
+  btnDelete.setAttribute("aria-label", "Delete row");
+  btnDelete.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 
-  const outputOriginal = mainInput.replace(/\s+/g, " ");
-  const tokens = mainInput.split(/[\s.-]+/).filter(Boolean);
+  row.appendChild(input);
+  row.appendChild(btnDelete);
+
+  return row;
+}
+
+function formatSinglePart(inputStr, sep, options) {
+  const outputOriginal = inputStr.replace(/\s+/g, " ");
+  const tokens = inputStr.split(/[\s.-]+/).filter(Boolean);
 
   const outputSpacesOnly = tokens.join(" ");
   const outputDashes = tokens.join("-");
   const outputDots = tokens.join(".");
   const outputNoSpaces = tokens.join("");
 
-  const modifiedEnabled = document.getElementById("section-two")
-    ? document.getElementById("section-two").checked
-    : true;
-
   const rawItems = [
-    ...(document.getElementById("section-one").checked ? [outputOriginal] : []),
-    ...(modifiedEnabled && document.getElementById("section-two-spaces").checked
-      ? [outputSpacesOnly]
-      : []),
-    ...(modifiedEnabled && document.getElementById("section-two-dashes").checked
-      ? [outputDashes]
-      : []),
-    ...(modifiedEnabled && document.getElementById("section-two-dots").checked
-      ? [outputDots]
-      : []),
-    ...(document.getElementById("section-three").checked ? [outputNoSpaces] : [])
+    ...(options.original ? [outputOriginal] : []),
+    ...(options.modified && options.spaces ? [outputSpacesOnly] : []),
+    ...(options.modified && options.dashes ? [outputDashes] : []),
+    ...(options.modified && options.dots ? [outputDots] : []),
+    ...(options.noSpaces ? [outputNoSpaces] : [])
   ];
 
   const seen = new Set();
   const finalItems = [];
 
-  const allItemsForDuplicates = [
-    outputOriginal,
-    outputSpacesOnly,
-    outputDashes,
-    outputDots,
-    outputNoSpaces
-  ];
-
-  allItemsForDuplicates.forEach(item => {
-    if (seen.has(item)) {
-      markDuplicateOption(item);
-    } else {
-      seen.add(item);
-    }
-  });
-
-  seen.clear();
   rawItems.forEach(item => {
     if (!seen.has(item)) {
       seen.add(item);
@@ -159,7 +162,132 @@ function updateOutput01(event) {
     }
   });
 
-  document.getElementById("output01").innerText = finalItems.join(sep);
+  return {
+    formatted: finalItems.join(sep),
+    items: [outputOriginal, outputSpacesOnly, outputDashes, outputDots, outputNoSpaces]
+  };
+}
+
+function updateOutput01(event) {
+  if (event) {
+    document.getElementById("reset01").disabled = false;
+    document.getElementById("save01").disabled = false;
+  }
+
+  syncMpnRowButtons();
+
+  syncModifiedGroup();
+
+  document.querySelectorAll(".duplicate-warning").forEach(el => {
+    el.classList.remove("duplicate-warning");
+  });
+
+  const sepRadio = document.querySelector('#inputform01 input[name="selector"]:checked');
+  const sepVal = sepRadio ? sepRadio.value : "/";
+  const sep = " " + sepVal + " ";
+
+  const modifiedEnabled = document.getElementById("section-two")
+    ? document.getElementById("section-two").checked
+    : true;
+
+  const options = {
+    original: document.getElementById("section-one") ? document.getElementById("section-one").checked : true,
+    modified: modifiedEnabled,
+    spaces: document.getElementById("section-two-spaces") ? document.getElementById("section-two-spaces").checked : true,
+    dashes: document.getElementById("section-two-dashes") ? document.getElementById("section-two-dashes").checked : true,
+    dots: document.getElementById("section-two-dots") ? document.getElementById("section-two-dots").checked : true,
+    noSpaces: document.getElementById("section-three") ? document.getElementById("section-three").checked : true
+  };
+
+  const rows = Array.from(document.querySelectorAll("#mpn-input-list .mpn-row"));
+  const inputEntries = rows.map((row, index) => {
+    const input = row.querySelector(".mpn-input");
+    return {
+      rowElement: row,
+      rowNumber: index + 1,
+      value: input ? input.value.trim() : ""
+    };
+  });
+
+  const hasAnyInput = inputEntries.some(e => e.value.length > 0);
+  if (hasAnyInput || rows.length > 1) {
+    document.getElementById("reset01").disabled = false;
+  }
+
+  const finishedRows = inputEntries
+    .filter(e => e.value.length > 0)
+    .map(e => {
+      const res = formatSinglePart(e.value, sep, options);
+      return {
+        rowNumber: e.rowNumber,
+        formatted: res.formatted,
+        items: res.items
+      };
+    });
+
+  const seenCheck = new Set();
+  finishedRows.forEach(row => {
+    seenCheck.clear();
+    row.items.forEach(item => {
+      if (seenCheck.has(item)) {
+        markDuplicateOption(item);
+      } else {
+        seenCheck.add(item);
+      }
+    });
+  });
+
+  const outputContainer = document.getElementById("output01-container");
+  const copyStatus = document.getElementById("copy-status01");
+  if (!outputContainer) return;
+
+  if (finishedRows.length === 0) {
+    outputContainer.innerHTML = '<span class="textarea" id="output01" role="textbox" contenteditable="false" readonly="readonly"></span>';
+    if (copyStatus) copyStatus.innerText = "Click Output to copy";
+    return;
+  }
+
+  if (finishedRows.length === 1) {
+    outputContainer.innerHTML = `<span class="textarea mpn-output-item" id="output01" role="textbox" contenteditable="false" readonly="readonly" data-label="Row 1" title="Click Output to copy">${escapeHtml(finishedRows[0].formatted)}</span>`;
+    if (copyStatus) copyStatus.innerText = "Click Output to copy";
+    return;
+  }
+
+  outputContainer.innerHTML = "";
+  finishedRows.forEach((row, idx) => {
+    const card = document.createElement("div");
+    card.className = "mpn-output-card";
+
+    const header = document.createElement("div");
+    header.className = "mpn-output-header";
+
+    const badge = document.createElement("span");
+    badge.className = "mpn-output-badge";
+    badge.innerText = `Row ${row.rowNumber}`;
+
+    const hint = document.createElement("span");
+    hint.className = "mpn-output-click-hint";
+    hint.innerText = "Click to copy";
+
+    header.appendChild(badge);
+    header.appendChild(hint);
+
+    const span = document.createElement("span");
+    span.className = "textarea mpn-output-item";
+    if (idx === 0) span.id = "output01";
+    span.setAttribute("role", "textbox");
+    span.setAttribute("contenteditable", "false");
+    span.setAttribute("readonly", "readonly");
+    span.setAttribute("title", `Click to copy Row ${row.rowNumber}`);
+    span.setAttribute("data-label", `Row ${row.rowNumber}`);
+    span.innerText = row.formatted;
+
+    card.appendChild(header);
+    card.appendChild(span);
+    outputContainer.appendChild(card);
+  });
+
+  if (copyStatus) copyStatus.innerText = "Click any row to copy";
 }
 
 function updateOutput02() {
@@ -294,35 +422,153 @@ function clickSelector2() {
   ).value;
 }
 
-document.getElementById("output01").addEventListener(
-  "mousedown",
-  function () {
-    const text = document.getElementById("output01").innerText;
-    try {
-      navigator.clipboard.writeText(text);
-      document.getElementById("copy-status01").innerText =
-        "Success! Copied to clipboard";
-      document.getElementById("copy-status01").classList.add("success");
-      setTimeout(function () {
-        document.getElementById("copy-status01").innerText =
-          "Click Output to copy";
-        document.getElementById("copy-status01").classList.remove("success");
-        document.getElementById("input01").select();
-      }, 1200);
-    } catch (err) {
-      document.getElementById("copy-status01").innerText =
-        "Failed to copy!";
-      document.getElementById("copy-status01").classList.add("failed");
-      setTimeout(function () {
-        document.getElementById("copy-status01").innerText =
-          "Click Output to copy";
-        document.getElementById("copy-status01").classList.remove("failed");
-        document.getElementById("input01").select();
-      }, 1200);
+function copyMpnOutput(text, label) {
+  const statusEl = document.getElementById("copy-status01");
+  const count = document.querySelectorAll("#output01-container .mpn-output-item").length;
+  const defaultText = count > 1 ? "Click any row to copy" : "Click Output to copy";
+
+  const onSuccess = () => {
+    if (!statusEl) return;
+    statusEl.innerText = label ? `Success! Copied ${label} to clipboard` : "Success! Copied to clipboard";
+    statusEl.classList.remove("failed");
+    statusEl.classList.add("success");
+    setTimeout(() => {
+      statusEl.innerText = defaultText;
+      statusEl.classList.remove("success");
+      const firstInput = document.getElementById("input01") || document.querySelector(".mpn-input");
+      if (firstInput) firstInput.select();
+    }, 1200);
+  };
+
+  const onFailed = () => {
+    if (!statusEl) return;
+    statusEl.innerText = "Failed to copy!";
+    statusEl.classList.remove("success");
+    statusEl.classList.add("failed");
+    setTimeout(() => {
+      statusEl.innerText = defaultText;
+      statusEl.classList.remove("failed");
+      const firstInput = document.getElementById("input01") || document.querySelector(".mpn-input");
+      if (firstInput) firstInput.select();
+    }, 1200);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+      fallbackCopy(text, onSuccess, onFailed);
+    });
+  } else {
+    fallbackCopy(text, onSuccess, onFailed);
+  }
+}
+
+function fallbackCopy(text, onSuccess, onFailed) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (successful) onSuccess();
+    else onFailed();
+  } catch (e) {
+    onFailed();
+  }
+}
+
+const output01Container = document.getElementById("output01-container");
+if (output01Container) {
+  output01Container.addEventListener("mousedown", function (e) {
+    const target = e.target.closest(".textarea");
+    if (!target) return;
+    const text = target.innerText.trim();
+    if (!text) return;
+    const label = target.getAttribute("data-label") || "";
+    copyMpnOutput(text, label);
+  });
+}
+
+const addMpnBtn = document.getElementById("btn-add-mpn");
+if (addMpnBtn) {
+  addMpnBtn.addEventListener("click", function () {
+    const mpnList = document.getElementById("mpn-input-list");
+    if (!mpnList) return;
+    const newRow = createMpnRow("");
+    mpnList.appendChild(newRow);
+    syncMpnRowButtons();
+    const newInput = newRow.querySelector(".mpn-input");
+    if (newInput) newInput.focus();
+    updateOutput01(true);
+  });
+}
+
+const mpnInputList = document.getElementById("mpn-input-list");
+if (mpnInputList) {
+  mpnInputList.addEventListener("click", function (e) {
+    const deleteBtn = e.target.closest(".btn-row-delete");
+
+    if (deleteBtn) {
+      const currentRow = deleteBtn.closest(".mpn-row");
+      const allRows = mpnInputList.querySelectorAll(".mpn-row");
+      if (allRows.length > 1) {
+        const prevRow = currentRow.previousElementSibling || currentRow.nextElementSibling;
+        currentRow.remove();
+        const remainingInputs = mpnInputList.querySelectorAll(".mpn-input");
+        if (remainingInputs.length > 0 && !document.getElementById("input01")) {
+          remainingInputs[0].id = "input01";
+        }
+        if (prevRow) {
+          const prevInput = prevRow.querySelector(".mpn-input");
+          if (prevInput) prevInput.focus();
+        }
+        syncMpnRowButtons();
+      } else {
+        const onlyInput = currentRow.querySelector(".mpn-input");
+        if (onlyInput) {
+          onlyInput.value = "";
+          onlyInput.focus();
+        }
+      }
+      updateOutput01(true);
+      return;
     }
-  },
-  false
-);
+  });
+
+  mpnInputList.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.target.classList.contains("mpn-input")) {
+      e.preventDefault();
+      const currentRow = e.target.closest(".mpn-row");
+      const newRow = createMpnRow("");
+      currentRow.after(newRow);
+      syncMpnRowButtons();
+      const newInput = newRow.querySelector(".mpn-input");
+      if (newInput) newInput.focus();
+      updateOutput01(true);
+    }
+  });
+
+  mpnInputList.addEventListener("paste", function (e) {
+    if (!e.target.classList.contains("mpn-input")) return;
+    const pasteData = (e.clipboardData || window.clipboardData)?.getData("text");
+    if (!pasteData) return;
+    const lines = pasteData.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      e.preventDefault();
+      e.target.value = lines[0];
+      let currentRow = e.target.closest(".mpn-row");
+      for (let i = 1; i < lines.length; i++) {
+        const newRow = createMpnRow(lines[i]);
+        currentRow.after(newRow);
+        currentRow = newRow;
+      }
+      syncMpnRowButtons();
+      updateOutput01(true);
+    }
+  });
+}
 
 document.getElementById("output03").addEventListener(
   "mousedown",
@@ -500,7 +746,25 @@ document.getElementById("collapse-all-modules").addEventListener("click", () => 
 });
 
 function resetForm1() {
-  document.getElementById("input01").value = "";
+  const mpnInputList = document.getElementById("mpn-input-list");
+  if (mpnInputList) {
+    const rows = mpnInputList.querySelectorAll(".mpn-row");
+    rows.forEach((row, idx) => {
+      if (idx === 0) {
+        const input = row.querySelector(".mpn-input");
+        if (input) {
+          input.id = "input01";
+          input.value = "";
+        }
+      } else {
+        row.remove();
+      }
+    });
+  } else {
+    const input = document.getElementById("input01");
+    if (input) input.value = "";
+  }
+
   document.getElementById("option-one").checked = true;
   document.getElementById("section-one").checked = true;
   document.getElementById("section-two").checked = true;
@@ -521,6 +785,7 @@ function resetForm1() {
     localStorage.removeItem(arr[i]);
   }
 
+  syncMpnRowButtons();
   syncModifiedGroup();
   updateOutput01();
 
@@ -686,6 +951,7 @@ window.onload = function(event) {
   }
 
 
+  syncMpnRowButtons();
   updateOutput01();
   syncAllCollapseButtonStates();
 };

@@ -42,7 +42,15 @@
       <div class="Part-Number-Input">
         <div class="form" id="inputform01">
           <label>Input:</label>
-          <input type="text" id="input01" placeholder="ZSB 5GM.819.203B" value="">
+          <div id="mpn-input-list" class="mpn-input-list">
+            <div class="mpn-row">
+              <input type="text" class="mpn-input" id="input01" placeholder="ZSB 5GM.819.203B" value="">
+            </div>
+          </div>
+          <button type="button" id="btn-add-mpn" class="btn-add-mpn" title="Add row" aria-label="Add row">
+            <svg width="14" height="14" viewBox="0 0 24 24"><path d="M19 11h-6V5a1 1 0 0 0-2 0v6H5a1 1 0 0 0 0 2h6v6a1 1 0 0 0 2 0v-6h6a1 1 0 0 0 0-2z"/></svg>
+            Add Row
+          </button>
           <label>Separator:</label>
           <div class="radio-group">
             <input type="radio" id="option-one" name="selector" value="/" checked>
@@ -85,7 +93,9 @@
       <div class="Part-Number-Output form">
         <label>Part Number Output:</label>
         <div>
-          <span class="textarea" id="output01" role="textbox" contenteditable="false" readonly="readonly"></span>
+          <div id="output01-container" class="output-container">
+            <span class="textarea" id="output01" role="textbox" contenteditable="false" readonly="readonly"></span>
+          </div>
           <div class="card-text"><small class="text-muted" id="copy-status01">Click Output to copy</small></div>
         </div>
       </div>
