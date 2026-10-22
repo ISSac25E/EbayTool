@@ -1,21 +1,24 @@
 /**
  * EbayTool Assistant - Universal eBay Listing Bookmarklet
- * Engine Version: 1.0.1
+ * Engine Version: 1.1.0
  * Protocol Version: 1.0
+ * Name: ⭐️ Fill eBay Listing v1.1.0
  *
- * Lightweight, CSP-compliant, user-friendly auto-fill runner for eBay listings.
- * - Dynamic element retargeting from clipboard payload
- * - Robust duplicate detection across chip variations & formatting
- * - Duplicate skipping; preserves all existing fields
- * - Minimal, non-intrusive notification toast
+ * Lightweight, CSP-compliant, mission-ready auto-fill runner for eBay listings.
+ * - Native eBay Seller Hub fake-menu-button / dropdown support with custom option commit
+ * - Fallback standard combobox / input chip support for other eBay forms
+ * - Deep multi-layer duplicate detection & pre-flight filtering (never touches DOM if up to date)
+ * - Safe screen-reader (.clipped) text stripping to prevent false mismatch
+ * - Post-flight verification confirming values actually committed
+ * - Non-intrusive status toast
  */
 (function () {
   'use strict';
 
-  const ENGINE_VERSION = '1.0.1';
+  const ENGINE_VERSION = '1.1.0';
   const TOAST_ID = '__ebay_assistant_toast__';
 
-  // 1. Sleek Minimal Notification Toast
+  // 1. Minimal Notification Toast
   function showToast(title, message, type = 'info', autoCloseMs = 0) {
     let toast = document.getElementById(TOAST_ID);
     if (!toast) {
@@ -25,12 +28,12 @@
         'position: fixed',
         'top: 16px',
         'right: 16px',
-        'width: 320px',
+        'width: 340px',
         'max-width: calc(100vw - 32px)',
         'background: #111827',
         'color: #ffffff',
         'border-radius: 8px',
-        'box-shadow: 0 10px 25px rgba(0,0,0,0.25)',
+        'box-shadow: 0 10px 25px rgba(0,0,0,0.35)',
         'z-index: 2147483647',
         'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         'font-size: 13px',
@@ -96,6 +99,7 @@
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  // 2. Normalization & Matching Logic
   function normalize(str) {
     return (str || '')
       .replace(/[\u00A0\u1680\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, ' ')
@@ -108,7 +112,96 @@
     return normalize(str).replace(/[^A-Z0-9]/g, '');
   }
 
-  // 2. Page Verification
+  function cleanEbayItemText(el) {
+    if (!el) return '';
+    try {
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll('.clipped, svg, button').forEach(x => x.remove());
+      return (clone.textContent || '').trim();
+    } catch (e) {
+      return (el.textContent || '').trim();
+    }
+  }
+
+  function createValueTracker() {
+    const exactSet = new Set();
+    const cleanSet = new Set();
+    let containerCleanText = '';
+
+    function add(str) {
+      if (!str) return;
+      // Strip eBay multi-item counter badge like "(+1)" or "(+2)" from button text
+      const stripped = String(str).replace(/\s*\(\+\d+\)\s*$/g, '').trim();
+      const norm = normalize(stripped);
+      if (!norm) return;
+
+      exactSet.add(norm);
+      const cl = normalizeClean(norm);
+      if (cl) cleanSet.add(cl);
+
+      // If string contains separators (/ or ; or |), index individual components
+      if (/[\/;|]/.test(norm)) {
+        norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean).forEach(part => {
+          exactSet.add(part);
+          const cp = normalizeClean(part);
+          if (cp) cleanSet.add(cp);
+        });
+      }
+    }
+
+    function setContainerRawText(txt) {
+      if (txt) {
+        containerCleanText = normalizeClean(txt);
+      }
+    }
+
+    function has(val) {
+      if (!val) return false;
+      const norm = normalize(val);
+      if (!norm) return false;
+
+      // 1. Direct exact normalized match
+      if (exactSet.has(norm)) return true;
+
+      // 2. Clean alphanumeric match (ignores spaces, dots, dashes, case)
+      const cl = normalizeClean(norm);
+      if (cl && cleanSet.has(cl)) return true;
+
+      // 3. Multi-segment match: if incoming val has multiple variations
+      if (/[\/;|]/.test(norm)) {
+        const parts = norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean);
+        for (const p of parts) {
+          if (exactSet.has(p)) return true;
+          const cp = normalizeClean(p);
+          if (cp && cleanSet.has(cp)) return true;
+          if (cp && cp.length >= 4 && containerCleanText.includes(cp)) return true;
+        }
+      }
+
+      // 4. Container visible text safety net (if string is substantial)
+      if (cl && cl.length >= 4 && containerCleanText.includes(cl)) {
+        return true;
+      }
+
+      // 5. Truncation match (... at end)
+      for (const item of exactSet) {
+        if (item.endsWith('...') && norm.startsWith(item.slice(0, -3))) return true;
+        if (norm.endsWith('...') && item.startsWith(norm.slice(0, -3))) return true;
+      }
+
+      return false;
+    }
+
+    return {
+      add,
+      has,
+      setContainerRawText,
+      size: () => exactSet.size,
+      getAll: () => Array.from(exactSet)
+    };
+  }
+
+  // 3. Page Verification
   function checkEbayPage(payload) {
     const host = window.location.hostname.toLowerCase();
     const url = window.location.href.toLowerCase();
@@ -131,93 +224,115 @@
     return true;
   }
 
-  // 3. Dynamic Field Container Finder
-  // Ascends to locate the component or row container that bounds THIS field and its chips
-  function findFieldContainer(input) {
-    if (!input) return null;
-    let best = input.parentElement;
-    let curr = input.parentElement;
-
-    while (curr && curr.tagName !== 'BODY') {
-      // If container holds multiple distinct input fields, stop ascending to prevent capturing other aspects
-      const inputs = curr.querySelectorAll('input[type="text"], input:not([type]), [role="combobox"]');
-      if (inputs.length > 1) {
-        break;
-      }
-
-      const hasChips = curr.querySelector(
-        '.chips-combobox__items, [class*="chips-combobox"], [class*="chip"], [class*="pill"], [class*="token"], [class*="tag"], button[aria-label*="remove" i], button[aria-label*="delete" i]'
-      );
-      const isCombobox = curr.classList && curr.classList.contains('chips-combobox') ||
-                         (curr.className && String(curr.className).includes('chips-combobox'));
-
-      if (hasChips || isCombobox) {
-        best = curr;
-      } else if (best === input.parentElement && curr !== input.parentElement) {
-        best = curr;
-      }
-      curr = curr.parentElement;
-    }
-    return best;
-  }
-
-  // 4. Dynamic Field Locator (Payload-driven)
+  // 4. Robust Target Field Locator (Handles both fake-menu-button and standard inputs)
   function locateTargetField(targetConfig) {
-    const customSelectors = (targetConfig && targetConfig.selectors) || [];
     const aliases = (targetConfig && targetConfig.aliases) || ['Manufacturer Part Number', 'MPN', 'Part Number'];
-    const inputSelector = (targetConfig && targetConfig.inputSelector) || 'input[type="text"], input:not([type]), [role="combobox"], [contenteditable="true"]';
+    const customSelectors = (targetConfig && targetConfig.selectors) || [];
 
-    // 1. Dynamic retargeting: custom selectors from clipboard payload
+    // Helper: inspect button
+    function isMenuButton(btn) {
+      if (!btn) return false;
+      const controls = btn.getAttribute('aria-controls');
+      const cls = btn.className || '';
+      return !!(controls || cls.includes('fake-menu-button') || cls.includes('se-expand-button'));
+    }
+
+    function resolveMenu(btn) {
+      const controlsId = btn.getAttribute('aria-controls');
+      if (controlsId) {
+        const m = document.getElementById(controlsId);
+        if (m) return m;
+      }
+      return btn.parentElement?.querySelector('.fake-menu-button__menu') ||
+             btn.closest('.fake-menu-button')?.querySelector('.fake-menu-button__menu') ||
+             btn.parentElement?.parentElement?.querySelector('.fake-menu-button__menu');
+    }
+
+    // Strategy 1: Direct button[name="attributes.Manufacturer Part Number"] or name matching aliases
+    for (const a of aliases) {
+      const btnByName = document.querySelector(`button[name="attributes.${a}" i]`) ||
+                        document.querySelector(`button[name*="${a}" i]`);
+      if (btnByName && btnByName.isConnected) {
+        const row = btnByName.closest('[data-testid="attribute"], .summary__attributes--fields, .summary__attributes--field, tr, fieldset') || btnByName.parentElement;
+        return {
+          type: 'menu',
+          button: btnByName,
+          menu: resolveMenu(btnByName),
+          container: row,
+          label: a
+        };
+      }
+    }
+
+    // Strategy 2: Proximity search by label / aspect name
+    const labelCandidates = Array.from(document.querySelectorAll('label, button.fake-link, [data-aspect-name], [data-name], span.field__label, .summary__attributes--label'));
+    for (const node of labelCandidates) {
+      const text = (node.innerText || node.textContent || '').trim();
+      const aspectAttr = (node.getAttribute('data-aspect-name') || node.getAttribute('data-name') || '').trim();
+
+      for (const a of aliases) {
+        const al = a.toLowerCase();
+        const matchesAspect = aspectAttr.toLowerCase() === al || aspectAttr.toLowerCase().includes(al);
+        const matchesText = text.toLowerCase() === al || (text.toLowerCase().includes(al) && text.length < al.length + 18);
+
+        if (matchesAspect || matchesText) {
+          const row = node.closest('[data-testid="attribute"], .summary__attributes--fields, .summary__attributes--field, [class*="aspect"], [class*="specific"], tr, fieldset') || node.parentElement?.parentElement;
+          if (row) {
+            // Check for menu button inside row
+            const btn = row.querySelector('button.fake-menu-button__button, button.se-expand-button__button, button[aria-controls], button[name^="attributes."]');
+            if (btn && isMenuButton(btn)) {
+              return {
+                type: 'menu',
+                button: btn,
+                menu: resolveMenu(btn),
+                container: row,
+                label: a
+              };
+            }
+            // Check for standard input inside row
+            const inp = row.querySelector('input[type="text"], input:not([type]), [role="combobox"]');
+            if (inp && inp.isConnected) {
+              return {
+                type: 'input',
+                input: inp,
+                container: row,
+                label: a
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Strategy 3: Custom selectors from payload
     for (const sel of customSelectors) {
       try {
-        const found = document.querySelector(sel);
-        if (found) {
-          const input = found.tagName === 'INPUT' ? found : found.querySelector(inputSelector);
-          if (input && input.isConnected) {
-            return {
-              input: input,
-              container: findFieldContainer(input)
-            };
+        const el = document.querySelector(sel);
+        if (el && el.isConnected) {
+          if (el.tagName === 'BUTTON' && isMenuButton(el)) {
+            const row = el.closest('[data-testid="attribute"], .summary__attributes--fields') || el.parentElement;
+            return { type: 'menu', button: el, menu: resolveMenu(el), container: row, label: 'Custom Selector' };
+          }
+          const inp = el.tagName === 'INPUT' ? el : el.querySelector('input');
+          if (inp && inp.isConnected) {
+            const row = inp.closest('[data-testid="attribute"], .summary__attributes--fields') || inp.parentElement;
+            return { type: 'input', input: inp, container: row, label: 'Custom Selector' };
           }
         }
       } catch (e) {}
     }
 
-    // 2. Input attributes
-    const inputs = Array.from(document.querySelectorAll(inputSelector));
-    for (const input of inputs) {
-      const aria = (input.getAttribute('aria-label') || '').toLowerCase();
-      const ph = (input.placeholder || '').toLowerCase();
-      const testId = (input.getAttribute('data-testid') || input.getAttribute('data-test-id') || '').toLowerCase();
-      const name = (input.name || '').toLowerCase();
-
+    // Strategy 4: Fallback to input with aria-label or placeholder
+    const allInputs = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), [role="combobox"]'));
+    for (const inp of allInputs) {
+      const aria = (inp.getAttribute('aria-label') || '').toLowerCase();
+      const ph = (inp.placeholder || '').toLowerCase();
+      const name = (inp.name || '').toLowerCase();
       for (const a of aliases) {
         const al = a.toLowerCase();
-        if (aria.includes(al) || ph.includes(al) || testId.includes(al) || name.includes(al)) {
-          return {
-            input: input,
-            container: findFieldContainer(input)
-          };
-        }
-      }
-    }
-
-    // 3. Label / text proximity
-    const textNodes = Array.from(document.querySelectorAll('label, span, div, h4'));
-    for (const node of textNodes) {
-      const text = (node.innerText || node.textContent || '').trim().toLowerCase();
-      for (const a of aliases) {
-        if (text === a.toLowerCase() || (text.includes(a.toLowerCase()) && text.length < a.length + 10)) {
-          const forAttr = node.getAttribute('for');
-          if (forAttr) {
-            const el = document.getElementById(forAttr);
-            if (el) return { input: el, container: findFieldContainer(el) };
-          }
-          const container = node.closest('[data-testid*="specific"], [class*="specific"], [class*="aspect"], tr, div:has(input)') || node.parentElement;
-          if (container) {
-            const inp = container.querySelector(inputSelector);
-            if (inp) return { input: inp, container: findFieldContainer(inp) };
-          }
+        if (aria.includes(al) || ph.includes(al) || name.includes(al)) {
+          const row = inp.closest('[data-testid="attribute"], .summary__attributes--fields') || inp.parentElement;
+          return { type: 'input', input: inp, container: row, label: a };
         }
       }
     }
@@ -225,216 +340,214 @@
     return null;
   }
 
-  // 5. Clean Text Extraction from Chip Elements
-  function extractCleanText(el) {
-    if (!el) return '';
+  // 5. Existing Values Extractor (Multi-layer)
+  function extractExistingValues(target) {
+    const tracker = createValueTracker();
 
-    // Check title or data-value attributes (often holds untruncated text)
-    const titleAttr = el.getAttribute('title') || el.getAttribute('data-value');
-    if (titleAttr && titleAttr.trim()) return titleAttr.trim();
-
-    // Check inner text span (e.g. .chip__text, .chip__title)
-    const textSpan = el.querySelector(
-      '.chip__text, .chip__title, [class*="chip__text"], [class*="chip__title"], [class*="text"], [class*="title"], [class*="label"], [class*="value"]'
-    );
-    if (textSpan) {
-      const spanTitle = textSpan.getAttribute('title') || textSpan.getAttribute('data-value');
-      if (spanTitle && spanTitle.trim()) return spanTitle.trim();
-      const st = textSpan.textContent || textSpan.innerText;
-      if (st && st.trim()) return st.trim();
+    if (target.container) {
+      tracker.setContainerRawText(target.container.innerText || target.container.textContent || '');
     }
 
-    // Check remove button aria-label (e.g. "Remove PART123")
-    const rmBtn = el.querySelector(
-      'button[aria-label*="remove" i], button[aria-label*="delete" i], [aria-label*="remove" i], [aria-label*="delete" i]'
-    );
-    if (rmBtn) {
-      const aria = rmBtn.getAttribute('aria-label') || '';
-      const m = aria.match(/(?:remove|delete|close|clear)\s+(.+)/i);
-      if (m && m[1] && m[1].trim()) return m[1].trim();
-    }
+    if (target.type === 'menu' && target.button) {
+      // Layer A: Trigger button text
+      const btnText = target.button.innerText || target.button.textContent || '';
+      // Strip count badges like "(+1)" or "(+2)"
+      const cleanBtnText = btnText.replace(/\s*\(\+\d+\)\s*$/g, '').trim();
+      if (cleanBtnText && !/^(select|enter your own|- select -)$/i.test(cleanBtnText)) {
+        tracker.add(cleanBtnText);
+      }
 
-    // Strip child buttons/svgs from clone and read text
-    try {
-      const clone = el.cloneNode(true);
-      const junk = clone.querySelectorAll(
-        'button, svg, [role="button"], [aria-label*="remove" i], [aria-label*="delete" i], [class*="remove"], [class*="close"], [class*="icon"], [class*="btn"]'
-      );
-      junk.forEach(j => j.remove());
-      let txt = clone.textContent || '';
-      txt = txt.replace(/[\u2715\u2716\u00D7\u2573\u274C\u274E✕×xX\s]+$/, '').trim();
-      if (txt) return txt;
-    } catch (e) {}
-
-    return (el.textContent || '').trim();
-  }
-
-  // 6. Pill / Chip Tracker with Multi-Variant Matching
-  function createPillTracker() {
-    const exactSet = new Set();
-    const cleanSet = new Set();
-
-    function add(str) {
-      if (!str) return;
-      const norm = normalize(str);
-      if (!norm) return;
-
-      exactSet.add(norm);
-      const cl = normalizeClean(norm);
-      if (cl) cleanSet.add(cl);
-
-      // If string contains separators (/ or ; or |), add individual components
-      if (/[\/;|]/.test(norm)) {
-        norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean).forEach(part => {
-          exactSet.add(part);
-          const cp = normalizeClean(part);
-          if (cp) cleanSet.add(cp);
+      // Layer B: Dropdown menu selected options (if rendered)
+      const menu = target.menu || resolveMenu(target.button);
+      if (menu) {
+        const selectedItems = Array.from(menu.querySelectorAll(
+          '[name^="selectedOptions-"] [role="menuitemcheckbox"][aria-checked="true"], .selectedOptions [role="menuitemcheckbox"][aria-checked="true"], [role="menuitemcheckbox"][aria-checked="true"]'
+        ));
+        selectedItems.forEach(item => {
+          const textEl = item.querySelector('.filter-menu__text') || item;
+          const txt = cleanEbayItemText(textEl);
+          if (txt) tracker.add(txt);
         });
       }
-    }
-
-    function has(val) {
-      if (!val) return false;
-      const norm = normalize(val);
-      if (!norm) return false;
-
-      // 1. Exact normalized match
-      if (exactSet.has(norm)) return true;
-
-      // 2. Alphanumeric match (ignores spaces, dots, dashes)
-      const cl = normalizeClean(norm);
-      if (cl && cleanSet.has(cl)) return true;
-
-      // 3. Segment match: if incoming val has multiple parts, check if any part exists
-      if (/[\/;|]/.test(norm)) {
-        const parts = norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean);
-        for (const p of parts) {
-          if (exactSet.has(p)) return true;
-          const cp = normalizeClean(p);
-          if (cp && cleanSet.has(cp)) return true;
-        }
-      }
-
-      // 4. Truncation match
-      for (const item of exactSet) {
-        if (item.endsWith('...') && norm.startsWith(item.slice(0, -3))) return true;
-        if (norm.endsWith('...') && item.startsWith(norm.slice(0, -3))) return true;
-      }
-
-      return false;
-    }
-
-    return {
-      add,
-      has,
-      size: () => exactSet.size,
-      getAll: () => Array.from(exactSet)
-    };
-  }
-
-  // 7. Extract Existing Values (Skips duplicates & preserves all fields)
-  function getExistingPills(container, input, chipSelector) {
-    const tracker = createPillTracker();
-
-    if (container) {
-      const sel = chipSelector || [
-        '.chip',
-        '[class*="chip"]',
-        '.pill',
-        '[class*="pill"]',
-        '.token',
-        '[class*="token"]',
-        '.tag',
-        '[class*="tag"]',
-        '[class*="chips-combobox__item"]',
-        'li[role="listitem"]',
-        '[data-testid*="chip"]',
-        '[data-testid*="pill"]',
-        '[data-testid*="tag"]'
-      ].join(', ');
-
-      const chipElements = container.querySelectorAll(sel);
+    } else if (target.type === 'input' && target.container) {
+      // Standard chips / pills extraction
+      const chipElements = Array.from(target.container.querySelectorAll(
+        '.chip, [class*="chip"], .pill, [class*="pill"], .token, [class*="token"], .tag, [class*="tag"], [class*="chips-combobox__item"], li[role="listitem"]'
+      ));
       chipElements.forEach(el => {
-        if (el === input || (el.contains && el.contains(input))) return;
-        const txt = extractCleanText(el);
+        if (el === target.input || (el.contains && el.contains(target.input))) return;
+        const txt = cleanEbayItemText(el);
         if (txt) tracker.add(txt);
       });
 
-      // Also check any remove buttons directly in container
-      const removeButtons = container.querySelectorAll(
-        'button[aria-label*="remove" i], button[aria-label*="delete" i], [aria-label*="remove" i], [aria-label*="delete" i], [class*="chip__button"], [class*="chip__remove"]'
-      );
+      const removeButtons = Array.from(target.container.querySelectorAll(
+        'button[aria-label*="remove" i], button[aria-label*="delete" i], [aria-label*="remove" i]'
+      ));
       removeButtons.forEach(btn => {
         const aria = btn.getAttribute('aria-label') || '';
         const m = aria.match(/(?:remove|delete|close|clear)\s+(.+)/i);
         if (m && m[1]) tracker.add(m[1]);
-        if (btn.parentElement && btn.parentElement !== container) {
-          const pt = extractCleanText(btn.parentElement);
-          if (pt) tracker.add(pt);
-        }
       });
-    }
 
-    if (input && input.value) {
-      tracker.add(input.value);
+      if (target.input && target.input.value) {
+        tracker.add(target.input.value);
+      }
     }
 
     return tracker;
   }
 
-  // 8. Add Value to eBay Field (React/Web Component compatible)
-  async function enterChip(input, container, value) {
-    input.focus();
-
+  // 6. Native Setter with React _valueTracker update
+  function setNativeValue(input, value) {
+    const lastValue = input.value;
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
     if (setter) {
       setter.call(input, value);
     } else {
       input.value = value;
     }
-
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(60);
-
-    const press = (type) => {
+    if (input._valueTracker) {
       try {
-        if (typeof KeyboardEvent === 'function') {
-          input.dispatchEvent(new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        } else {
-          const ev = new Event(type, { bubbles: true });
-          ev.key = 'Enter';
-          ev.keyCode = 13;
-          input.dispatchEvent(ev);
-        }
+        input._valueTracker.setValue(lastValue);
       } catch (e) {}
-    };
-
-    press('keydown');
-    press('keypress');
-    press('keyup');
-    await sleep(60);
-
-    if (input.value && container) {
-      const addBtn = container.querySelector('button[aria-label*="add" i], button[aria-label*="plus" i], [data-testid*="add" i]');
-      if (addBtn && addBtn !== input) {
-        addBtn.click();
-        await sleep(60);
-      }
     }
-
-    await sleep(150);
   }
 
-  // 9. Main Execution
+  // 7. eBay Menu Add Runner (The real Seller Hub mechanism)
+  async function addViaEbayMenu(target, toAdd) {
+    const btn = target.button;
+    let menu = target.menu || resolveMenu(btn);
+
+    // Step 1: Open menu if not already open
+    if (btn.getAttribute('aria-expanded') !== 'true') {
+      btn.click();
+      await sleep(350);
+      menu = menu || resolveMenu(btn);
+    }
+
+    if (!menu) {
+      throw new Error('eBay menu container could not be opened.');
+    }
+
+    // Step 2: Locate search box
+    const searchInput = menu.querySelector(
+      'input[name*="search-box-"], input[placeholder*="Enter your own" i], input[aria-label*="Enter your own" i], .se-search-box input, input[type="text"]'
+    );
+
+    if (!searchInput) {
+      throw new Error('Could not find "Enter your own" input inside eBay dropdown.');
+    }
+
+    let addedCount = 0;
+
+    for (let i = 0; i < toAdd.length; i++) {
+      const val = toAdd[i];
+      showToast('⭐️ Adding Part Numbers', `[${i + 1}/${toAdd.length}] Typing: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`);
+
+      // 1. Focus search input and clear it
+      searchInput.focus();
+      setNativeValue(searchInput, '');
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(100);
+
+      // 2. Type value and trigger input event
+      setNativeValue(searchInput, val);
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(400);
+
+      // 3. Find custom option checkbox
+      let customOption = menu.querySelector(
+        '[name^="customOptions-"] [role="menuitemcheckbox"], .customOptions [role="menuitemcheckbox"]'
+      );
+
+      // If not found by customOptions class, find by matching text
+      if (!customOption) {
+        const allItems = Array.from(menu.querySelectorAll('[role="menuitemcheckbox"]'));
+        customOption = allItems.find(it => {
+          const txt = cleanEbayItemText(it);
+          return normalizeClean(txt) === normalizeClean(val);
+        });
+      }
+
+      if (customOption) {
+        customOption.click();
+        addedCount++;
+        await sleep(350);
+      } else {
+        // Fallback: try pressing Enter on searchInput
+        const ev = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
+        searchInput.dispatchEvent(ev);
+        await sleep(300);
+      }
+
+      // Clear search box after commit
+      setNativeValue(searchInput, '');
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(150);
+    }
+
+    // Step 3: Cleanly close the menu
+    if (btn.getAttribute('aria-expanded') === 'true') {
+      btn.click();
+      await sleep(250);
+    }
+
+    return addedCount;
+  }
+
+  // 8. Standard Combobox / Input Fallback Runner
+  async function addViaStandardInput(target, toAdd) {
+    const input = target.input;
+    let addedCount = 0;
+
+    for (let i = 0; i < toAdd.length; i++) {
+      const val = toAdd[i];
+      showToast('⭐️ Adding Part Numbers', `[${i + 1}/${toAdd.length}] Entering: "${val.slice(0, 22)}..."`);
+
+      input.focus();
+      await sleep(60);
+      setNativeValue(input, val);
+      input.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+      await sleep(120);
+
+      // Check for suggestion popup item
+      const options = Array.from(document.querySelectorAll('[role="option"], .combobox__option, li[role="option"]'));
+      const matched = options.find(opt => {
+        const t = (opt.innerText || opt.textContent || '').trim().toLowerCase();
+        return t === val.toLowerCase();
+      });
+
+      if (matched && typeof matched.click === 'function') {
+        matched.click();
+        addedCount++;
+        await sleep(150);
+      } else {
+        // Dispatch Enter
+        ['keydown', 'keypress', 'keyup'].forEach(type => {
+          const ev = new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true });
+          input.dispatchEvent(ev);
+        });
+        addedCount++;
+        await sleep(150);
+      }
+
+      if (typeof input.blur === 'function') input.blur();
+      await sleep(120);
+    }
+
+    return addedCount;
+  }
+
+  // 9. Main Workflow Runner
   async function run() {
-    showToast('eBay Assistant', 'Reading clipboard content...');
+    showToast('⭐️ eBay Assistant', 'Reading clipboard content...');
 
     let text = '';
     try {
       text = await navigator.clipboard.readText();
     } catch (e) {
-      showToast('Clipboard Access Denied', 'Please click the bookmarklet again directly to allow clipboard access.', 'error', 5000);
+      showToast('Clipboard Access Denied', 'Please click the bookmarklet again to allow clipboard access.', 'error', 5000);
       return;
     }
 
@@ -457,56 +570,99 @@
 
     const rows = Array.isArray(payload.rows) ? payload.rows.map(r => String(r).trim()).filter(Boolean) : [];
     if (rows.length === 0) {
-      showToast('No Data', 'The copied content contains no rows to add.', 'warn', 4000);
+      showToast('No Data', 'The copied content contains no part numbers to add.', 'warn', 4000);
       return;
     }
 
-    showToast('eBay Assistant', 'Locating field on page...');
+    showToast('⭐️ eBay Assistant', 'Checking existing part numbers...');
     const targetConfig = payload.target || {};
     const target = locateTargetField(targetConfig);
 
-    if (!target || !target.input) {
+    if (!target) {
       showToast('Field Not Found', 'Could not locate Manufacturer Part Number field. Make sure Item Specifics is visible.', 'error', 6000);
       return;
     }
 
-    const existing = getExistingPills(target.container, target.input, targetConfig.chipSelector);
-    let added = 0;
-    let skipped = 0;
+    // Step 1: Scan existing values on eBay page
+    const existingBefore = extractExistingValues(target);
+    const initialCount = existingBefore.size();
 
-    const existCount = existing.size();
-    const existInfo = existCount > 0 ? ` (${existCount} existing detected)` : '';
-    showToast('eBay Assistant', `Processing ${rows.length} item(s)...${existInfo}`);
+    // Step 2: Pre-filter rows into already-existing vs to-add
+    const toAdd = [];
+    const alreadyPresent = [];
 
-    for (let i = 0; i < rows.length; i++) {
-      const val = rows[i];
-      if (existing.has(val)) {
-        skipped++;
+    for (const val of rows) {
+      if (existingBefore.has(val)) {
+        alreadyPresent.push(val);
       } else {
-        await enterChip(target.input, target.container, val);
-        existing.add(val);
-        added++;
+        toAdd.push(val);
+        // Track intra-batch duplicates so same row isn't added twice in 1 run
+        existingBefore.add(val);
       }
     }
 
-    // Friendly Result Summary
-    if (added > 0) {
-      const skipNote = skipped > 0 ? ` (${skipped} duplicate${skipped > 1 ? 's' : ''} skipped)` : '';
-      showToast(
-        'Success',
-        `Added <b>${added}</b> part number${added > 1 ? 's' : ''} to listing!${skipNote}`,
-        'success',
-        4000
-      );
-    } else if (skipped > 0) {
+    // Step 3: CRITICAL PRE-FLIGHT CHECK - If ALL items already exist, STOP IMMEDIATELY!
+    if (toAdd.length === 0) {
       showToast(
         'Already Up to Date',
-        `All <b>${skipped}</b> part number${skipped > 1 ? 's' : ''} are already entered in this listing.`,
+        `All <b>${alreadyPresent.length}</b> part number${alreadyPresent.length > 1 ? 's' : ''} already exist in this listing. (0 added)`,
         'info',
-        4000
+        4500
+      );
+      return;
+    }
+
+    // Step 4: Add new items
+    showToast('⭐️ eBay Assistant', `Adding ${toAdd.length} new part number(s)... (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)`);
+
+    let committedCount = 0;
+    if (target.type === 'menu') {
+      committedCount = await addViaEbayMenu(target, toAdd);
+    } else {
+      committedCount = await addViaStandardInput(target, toAdd);
+    }
+
+    // Step 5: Post-Flight Verification
+    await sleep(300);
+    const existingAfter = extractExistingValues(target);
+
+    let verifiedAdded = 0;
+    let failedToCommit = 0;
+
+    for (const val of toAdd) {
+      if (existingAfter.has(val)) {
+        verifiedAdded++;
+      } else {
+        failedToCommit++;
+      }
+    }
+
+    // Step 6: Honest, informative user feedback
+    const skipText = alreadyPresent.length > 0 ? ` (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)` : '';
+
+    if (verifiedAdded > 0 && failedToCommit === 0) {
+      showToast(
+        'Success',
+        `Added <b>${verifiedAdded}</b> part number${verifiedAdded > 1 ? 's' : ''} to listing!${skipText}`,
+        'success',
+        5000
+      );
+    } else if (verifiedAdded > 0 && failedToCommit > 0) {
+      showToast(
+        'Partial Success',
+        `Added <b>${verifiedAdded}</b>, but <b>${failedToCommit}</b> could not be committed by eBay.${skipText}`,
+        'warn',
+        6000
+      );
+    } else if (verifiedAdded === 0 && failedToCommit > 0) {
+      showToast(
+        'eBay Did Not Commit',
+        `Could not commit ${failedToCommit} part number(s). Check eBay 65-character limit or format.${skipText}`,
+        'error',
+        7000
       );
     } else {
-      showToast('Done', 'No changes were made to the listing.', 'info', 3000);
+      showToast('Already Up to Date', `All items already present in listing.${skipText}`, 'info', 4000);
     }
   }
 
