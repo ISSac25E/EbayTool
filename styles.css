@@ -527,25 +527,60 @@ button:disabled svg path {
    eBay Assistant: Global Bookmarklet & Modal
    ========================================== */
 
-.btn-global-bookmarklet {
-  background: #f0f7ff !important;
-  border: 1px solid #93c5fd !important;
-  color: #1d4ed8 !important;
-  cursor: pointer;
+/* Bookmarklet Direct Drag Bar */
+.bm-drag-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px dashed #93c5fd;
+  min-height: 40px;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 280px;
+}
+
+.bm-drag-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e40af;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-bookmarklet-drag {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700;
+  padding: 6px 14px !important;
+  border-radius: 4px;
+  border: 1px solid #1d4ed8 !important;
+  text-decoration: none;
+  cursor: grab;
+  white-space: nowrap;
   transition: all 0.2s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 
-.btn-global-bookmarklet:hover,
-.btn-global-bookmarklet:focus {
-  background: #dbeafe !important;
-  border-color: #3b82f6 !important;
-  color: #1e40af !important;
+.btn-bookmarklet-drag:hover,
+.btn-bookmarklet-drag:focus {
+  background: #1d4ed8 !important;
+  border-color: #1e40af !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.35);
 }
 
-.btn-global-bookmarklet svg {
-  stroke: #1d4ed8;
+.btn-bookmarklet-drag:active {
+  cursor: grabbing;
 }
-
 
 /* Master Copy for eBay Bookmarklet */
 .btn-master-copy-ebay {

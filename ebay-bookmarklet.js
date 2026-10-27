@@ -18,6 +18,8 @@
   'use strict';
 
   const ENGINE_VERSION = '1.2.0';
+  const REQUIRED_PROTOCOL = 'EBAY_TOOL_PAYLOAD';
+  const REQUIRED_VERSION = '1.2';
   const TOAST_ID = '__ebay_assistant_toast__';
 
   // 1. Minimal Notification Toast
@@ -676,10 +678,28 @@
     try {
       payload = JSON.parse(text);
     } catch (e) {
-      payload = {
-        action: 'UPDATE_MPN',
-        rows: text.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
-      };
+      payload = null;
+    }
+
+    if (!payload || typeof payload !== 'object' || payload.__protocol !== REQUIRED_PROTOCOL) {
+      showToast(
+        'Invalid Data',
+        'Clipboard does not contain valid eBay Assistant data. Click <b>Copy for eBay</b> or <b>Master Copy</b> in the tool first.',
+        'error',
+        6000
+      );
+      return;
+    }
+
+    const payloadVersion = String(payload.version || 'unknown');
+    if (payloadVersion !== REQUIRED_VERSION) {
+      showToast(
+        'Version Mismatch',
+        `Copied data is <b>v${payloadVersion}</b>, but Bookmarklet is <b>v${ENGINE_VERSION}</b>.<br>Please drag the new bookmarklet from the tool bar.`,
+        'error',
+        7000
+      );
+      return;
     }
 
     if (!checkEbayPage(payload)) return;

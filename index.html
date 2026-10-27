@@ -8,12 +8,10 @@
 </head>
 <body>
 <div class="global-collapse-controls">
-  <button type="button" id="btn-open-bm-modal" class="btn-global-bookmarklet" aria-label="eBay Bookmarklet Assistant" title="Install or setup the eBay Bookmarklet">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-    </svg>
-    <span>eBay Bookmarklet</span>
-  </button>
+    <div class="bm-drag-container" title="Drag this button up to your browser Bookmarks Bar">
+    <span class="bm-drag-label">Drag to bookmark bar:</span>
+    <a id="ebay-bookmarklet-link" class="btn-bookmarklet-drag" href="#" draggable="true" title="Drag to Bookmarks bar">Fill eBay Listing v1.2.0</a>
+  </div>
     <button type="button" id="btn-master-copy-ebay" class="btn-master-copy-ebay" aria-label="Master Copy for eBay" title="Copy Title and Part Numbers for eBay Bookmarklet">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
@@ -229,32 +227,32 @@
     <div class="Title-Creator-Main collapse show fourth">
       <div class="form" id="inputform04">
         <label>Years:</label>
-        <input type="text" id="title-years" placeholder="2015 - 2021" value="2015 - 2021">
+        <input type="text" id="title-years" placeholder="2015 - 2021" value="">
 
-        <div style="display: inline-flex; width: 100%; gap: 10px;">
+        <div style="display: inline-flex; width: 100%; gap: 10px; margin-top: 10px;">
           <div class="form" style="width: 45%;">
             <label>Make:</label>
-            <input type="text" id="title-make" placeholder="VW" value="VW">
+            <input type="text" id="title-make" placeholder="VW" value="">
           </div>
           <div class="form" style="width: 55%;">
             <label>Model:</label>
-            <input type="text" id="title-model" placeholder="GTI Golf" value="GTI Golf">
+            <input type="text" id="title-model" placeholder="GTI Golf" value="">
           </div>
         </div>
 
         <label>OEM Section:</label>
         <div class="radio-group">
-          <input type="checkbox" id="title-include-oem" name="title-oem" checked>
+          <input type="checkbox" id="title-include-oem" name="title-oem">
           <label for="title-include-oem" class="RadioLabel">OEM</label>
           <input type="checkbox" id="title-include-genuine" name="title-genuine">
           <label for="title-include-genuine" class="RadioLabel">Genuine</label>
         </div>
 
         <label>Car Part Name:</label>
-        <input type="text" id="title-part-name" placeholder="Rear Console HVAC Vent Duct ASSEMBLY" value="Rear Console HVAC Vent Duct ASSEMBLY">
+        <input type="text" id="title-part-name" placeholder="Rear Console HVAC Vent Duct ASSEMBLY" value="">
 
         <label>Part Number:</label>
-        <input type="text" id="title-part-number" placeholder="5GM.819.203B" value="5GM.819.203B">
+        <input type="text" id="title-part-number" placeholder="5GM.819.203B" value="">
       </div>
 
       <div class="Title-Creator-Output form">
@@ -283,65 +281,6 @@
 
   <script src="script.js?v=__BUILD_REV__"></script>
 
-<div id="bookmarklet-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="bm-modal-title">
-  <div class="modal-card">
-    <div class="modal-header">
-      <div class="modal-title-wrap">
-        <span class="modal-icon">⚡</span>
-        <h2 id="bm-modal-title" class="modal-title">eBay Auto-Fill Bookmarklet</h2>
-      </div>
-      <button type="button" id="btn-close-bm-modal" class="btn-modal-close" aria-label="Close modal">&times;</button>
-    </div>
-    <div class="modal-body">
-      <!-- Desktop View (Default) -->
-      <div id="bm-desktop-install" class="bm-install-view">
-        <p class="bm-lead">Quickly fills part numbers directly into your active eBay listing in one click.</p>
-        <div class="bm-drag-box">
-          <div class="bm-drag-hint">Drag this button up to your Bookmarks Bar:</div>
-          <a id="ebay-bookmarklet-link" class="bookmarklet-drag-btn" href="#" draggable="true" title="Fill eBay Listing v1.2.0 - Drag to Bookmarks bar">
-            <span>Fill eBay Listing v1.2.0</span>
-          </a>
-          <div class="bm-shortcut-hint">Bookmarks bar hidden? Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> (or <kbd>&#8984;</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> on Mac)</div>
-        </div>
-        <div class="bm-workflow-steps">
-          <div class="bm-step"><span class="bm-step-num">1</span> Click <b>Copy for eBay</b> or <b>Master Copy</b> in the tool</div>
-          <div class="bm-step"><span class="bm-step-num">2</span> Switch to your eBay listing page</div>
-          <div class="bm-step"><span class="bm-step-num">3</span> Click <b>Fill eBay Listing v1.2.0</b> on your bookmarks bar</div>
-        </div>
-        <div class="bm-fallback-box">
-          <button type="button" id="btn-copy-bm-code" class="btn-copy-code-minimal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span>Copy Bookmarklet Code</span>
-          </button>
-        </div>
-      </div>
-      <!-- Mobile View (Shown when mobile detected) -->
-      <div id="bm-mobile-install" class="bm-install-view" style="display: none;">
-        <div class="mobile-notice-box">
-          <div class="mobile-notice-icon">📱</div>
-          <h3 class="mobile-notice-title">Desktop Browser Recommended</h3>
-          <p class="mobile-notice-text">Mobile browsers (iOS Safari, Android Chrome) do not support dragging bookmarklets to a bookmarks bar.</p>
-          <p class="mobile-notice-text">For the easiest 1-click auto-fill, open this page on a <b>Desktop or Laptop computer</b>.</p>
-        </div>
-        <details class="mobile-manual-accordion">
-          <summary>Need it on mobile? Tap for manual instructions</summary>
-          <div class="mobile-manual-body">
-            <ol class="mobile-steps">
-              <li>Tap <b>Copy Bookmarklet Code</b> below.</li>
-              <li>Bookmark this page (or any webpage) in your mobile browser.</li>
-              <li>Edit the bookmark: name it <b>Fill eBay Listing v1.2.0</b>, delete its address/URL, and paste the code.</li>
-              <li>On your eBay listing page, type <b>Fill eBay Listing</b> in the address bar and select the bookmark to run.</li>
-            </ol>
-            <button type="button" id="btn-copy-bm-code-mobile" class="btn-copy-code-minimal mobile-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              <span>Copy Bookmarklet Code</span>
-            </button>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-</div>
 
 </body>
 </html>
