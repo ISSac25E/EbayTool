@@ -1,12 +1,14 @@
 /**
  * EbayTool Assistant - Universal eBay Listing Bookmarklet
- * Engine Version: 1.1.0
- * Protocol Version: 1.0
- * Name: Fill eBay Listing v1.1.0
+ * Engine Version: 1.2.0
+ * Protocol Version: 1.2
+ * Name: Fill eBay Listing v1.2.0
  *
  * Lightweight, CSP-compliant, mission-ready auto-fill runner for eBay listings.
+ * - Multi-field execution: Listing Title + Manufacturer Part Number (MPN)
+ * - Master payload & individual payload support (Title only, MPN only, or Both)
  * - Native eBay Seller Hub fake-menu-button / dropdown support with custom option commit
- * - Fallback standard combobox / input chip support for other eBay forms
+ * - React _valueTracker bypass + prototype setters for controlled inputs
  * - Deep multi-layer duplicate detection & pre-flight filtering (never touches DOM if up to date)
  * - Safe screen-reader (.clipped) text stripping to prevent false mismatch
  * - Post-flight verification confirming values actually committed
@@ -15,7 +17,7 @@
 (function () {
   'use strict';
 
-  const ENGINE_VERSION = '1.1.0';
+  const ENGINE_VERSION = '1.2.0';
   const TOAST_ID = '__ebay_assistant_toast__';
 
   // 1. Minimal Notification Toast
@@ -28,7 +30,7 @@
         'position: fixed',
         'top: 16px',
         'right: 16px',
-        'width: 340px',
+        'width: 350px',
         'max-width: calc(100vw - 32px)',
         'background: #111827',
         'color: #ffffff',
@@ -130,7 +132,6 @@
 
     function add(str) {
       if (!str) return;
-      // Strip eBay multi-item counter badge like "(+1)" or "(+2)" from button text
       const stripped = String(str).replace(/\s*\(\+\d+\)\s*$/g, '').trim();
       const norm = normalize(stripped);
       if (!norm) return;
@@ -139,7 +140,6 @@
       const cl = normalizeClean(norm);
       if (cl) cleanSet.add(cl);
 
-      // If string contains separators (/ or ; or |), index individual components
       if (/[\/;|]/.test(norm)) {
         norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean).forEach(part => {
           exactSet.add(part);
@@ -160,14 +160,10 @@
       const norm = normalize(val);
       if (!norm) return false;
 
-      // 1. Direct exact normalized match
       if (exactSet.has(norm)) return true;
-
-      // 2. Clean alphanumeric match (ignores spaces, dots, dashes, case)
       const cl = normalizeClean(norm);
       if (cl && cleanSet.has(cl)) return true;
 
-      // 3. Multi-segment match: if incoming val has multiple variations
       if (/[\/;|]/.test(norm)) {
         const parts = norm.split(/[\/;|]/).map(s => s.trim()).filter(Boolean);
         for (const p of parts) {
@@ -178,12 +174,10 @@
         }
       }
 
-      // 4. Container visible text safety net (if string is substantial)
       if (cl && cl.length >= 4 && containerCleanText.includes(cl)) {
         return true;
       }
 
-      // 5. Truncation match (... at end)
       for (const item of exactSet) {
         if (item.endsWith('...') && norm.startsWith(item.slice(0, -3))) return true;
         if (norm.endsWith('...') && item.startsWith(norm.slice(0, -3))) return true;
@@ -224,12 +218,113 @@
     return true;
   }
 
-  // 4. Robust Target Field Locator (Handles both fake-menu-button and standard inputs)
+  // 4. Native Setter with React _valueTracker update
+  function setNativeValue(el, value) {
+    const lastValue = el.value;
+    const proto = el.tagName === 'TEXTAREA' ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (setter) {
+      setter.call(el, value);
+    } else {
+      el.value = value;
+    }
+    if (el._valueTracker) {
+      try {
+        el._valueTracker.setValue(lastValue);
+      } catch (e) {}
+    }
+  }
+
+  // 5. Title Section: Locator & Updater
+  function locateTitleField(titleConfig) {
+    const customSelectors = (titleConfig && titleConfig.selectors) || [
+      'input[name="title"]',
+      'textarea[name="title"]',
+      'input[data-testid="title"]',
+      'textarea[data-testid="title"]',
+      'input[aria-label*="Title" i]',
+      'textarea[aria-label*="Title" i]',
+      'input[placeholder*="Title" i]',
+      'textarea[placeholder*="Title" i]',
+      'div[class*="title" i] input',
+      'div[class*="title" i] textarea'
+    ];
+
+    for (const sel of customSelectors) {
+      try {
+        const el = document.querySelector(sel);
+        if (el && el.isConnected) {
+          return el;
+        }
+      } catch (e) {}
+    }
+
+    const labels = Array.from(document.querySelectorAll('label, [class*="label"], span, h3, h4'));
+    for (const lbl of labels) {
+      const txt = (lbl.innerText || lbl.textContent || '').trim().toLowerCase();
+      if (txt === 'title' || txt === 'listing title' || (txt.includes('title') && txt.length < 18)) {
+        const container = lbl.closest('[class*="field"], [class*="row"], [class*="title"], div') || lbl.parentElement;
+        if (container) {
+          const inp = container.querySelector('input[type="text"], input:not([type]), textarea');
+          if (inp && inp.isConnected) return inp;
+        }
+        const forAttr = lbl.getAttribute('for');
+        if (forAttr) {
+          const el = document.getElementById(forAttr);
+          if (el && el.isConnected) return el;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  async function updateEbayTitle(titleConfig, newTitle) {
+    if (!newTitle || !String(newTitle).trim()) {
+      return { success: true, skipped: true, reason: 'Empty title' };
+    }
+
+    const cleanTitle = String(newTitle).trim().slice(0, 80);
+    const titleEl = locateTitleField(titleConfig);
+
+    if (!titleEl) {
+      return { success: false, reason: 'Title field not found' };
+    }
+
+    const currentVal = (titleEl.value || '').trim();
+    if (currentVal === cleanTitle) {
+      return { success: true, updated: false, alreadyUpToDate: true, value: cleanTitle };
+    }
+
+    titleEl.focus();
+    await sleep(60);
+
+    setNativeValue(titleEl, cleanTitle);
+    titleEl.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+    titleEl.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+    await sleep(150);
+
+    if (typeof titleEl.blur === 'function') {
+      titleEl.blur();
+    }
+    await sleep(150);
+
+    const verified = (titleEl.value || '').trim();
+    const success = verified === cleanTitle;
+
+    return {
+      success: success,
+      updated: success,
+      value: verified,
+      reason: success ? null : `Value mismatch (got "${verified.slice(0, 20)}...")`
+    };
+  }
+
+  // 6. MPN Section: Locator, Existing Values & Updaters
   function locateTargetField(targetConfig) {
     const aliases = (targetConfig && targetConfig.aliases) || ['Manufacturer Part Number', 'MPN', 'Part Number'];
     const customSelectors = (targetConfig && targetConfig.selectors) || [];
 
-    // Helper: inspect button
     function isMenuButton(btn) {
       if (!btn) return false;
       const controls = btn.getAttribute('aria-controls');
@@ -248,7 +343,6 @@
              btn.parentElement?.parentElement?.querySelector('.fake-menu-button__menu');
     }
 
-    // Strategy 1: Direct button[name="attributes.Manufacturer Part Number"] or name matching aliases
     for (const a of aliases) {
       const btnByName = document.querySelector(`button[name="attributes.${a}" i]`) ||
                         document.querySelector(`button[name*="${a}" i]`);
@@ -264,7 +358,6 @@
       }
     }
 
-    // Strategy 2: Proximity search by label / aspect name
     const labelCandidates = Array.from(document.querySelectorAll('label, button.fake-link, [data-aspect-name], [data-name], span.field__label, .summary__attributes--label'));
     for (const node of labelCandidates) {
       const text = (node.innerText || node.textContent || '').trim();
@@ -278,7 +371,6 @@
         if (matchesAspect || matchesText) {
           const row = node.closest('[data-testid="attribute"], .summary__attributes--fields, .summary__attributes--field, [class*="aspect"], [class*="specific"], tr, fieldset') || node.parentElement?.parentElement;
           if (row) {
-            // Check for menu button inside row
             const btn = row.querySelector('button.fake-menu-button__button, button.se-expand-button__button, button[aria-controls], button[name^="attributes."]');
             if (btn && isMenuButton(btn)) {
               return {
@@ -289,7 +381,6 @@
                 label: a
               };
             }
-            // Check for standard input inside row
             const inp = row.querySelector('input[type="text"], input:not([type]), [role="combobox"]');
             if (inp && inp.isConnected) {
               return {
@@ -304,7 +395,6 @@
       }
     }
 
-    // Strategy 3: Custom selectors from payload
     for (const sel of customSelectors) {
       try {
         const el = document.querySelector(sel);
@@ -322,7 +412,6 @@
       } catch (e) {}
     }
 
-    // Strategy 4: Fallback to input with aria-label or placeholder
     const allInputs = Array.from(document.querySelectorAll('input[type="text"], input:not([type]), [role="combobox"]'));
     for (const inp of allInputs) {
       const aria = (inp.getAttribute('aria-label') || '').toLowerCase();
@@ -340,7 +429,6 @@
     return null;
   }
 
-  // 5. Existing Values Extractor (Multi-layer)
   function extractExistingValues(target) {
     const tracker = createValueTracker();
 
@@ -349,16 +437,13 @@
     }
 
     if (target.type === 'menu' && target.button) {
-      // Layer A: Trigger button text
       const btnText = target.button.innerText || target.button.textContent || '';
-      // Strip count badges like "(+1)" or "(+2)"
       const cleanBtnText = btnText.replace(/\s*\(\+\d+\)\s*$/g, '').trim();
       if (cleanBtnText && !/^(select|enter your own|- select -)$/i.test(cleanBtnText)) {
         tracker.add(cleanBtnText);
       }
 
-      // Layer B: Dropdown menu selected options (if rendered)
-      const menu = target.menu || resolveMenu(target.button);
+      const menu = target.menu || (target.button.getAttribute('aria-controls') ? document.getElementById(target.button.getAttribute('aria-controls')) : null);
       if (menu) {
         const selectedItems = Array.from(menu.querySelectorAll(
           '[name^="selectedOptions-"] [role="menuitemcheckbox"][aria-checked="true"], .selectedOptions [role="menuitemcheckbox"][aria-checked="true"], [role="menuitemcheckbox"][aria-checked="true"]'
@@ -370,7 +455,6 @@
         });
       }
     } else if (target.type === 'input' && target.container) {
-      // Standard chips / pills extraction
       const chipElements = Array.from(target.container.querySelectorAll(
         '.chip, [class*="chip"], .pill, [class*="pill"], .token, [class*="token"], .tag, [class*="tag"], [class*="chips-combobox__item"], li[role="listitem"]'
       ));
@@ -397,45 +481,26 @@
     return tracker;
   }
 
-  // 6. Native Setter with React _valueTracker update
-  function setNativeValue(input, value) {
-    const lastValue = input.value;
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-    if (setter) {
-      setter.call(input, value);
-    } else {
-      input.value = value;
-    }
-    if (input._valueTracker) {
-      try {
-        input._valueTracker.setValue(lastValue);
-      } catch (e) {}
-    }
-  }
-
-  // 7. eBay Menu Add Runner (The real Seller Hub mechanism)
   async function addViaEbayMenu(target, toAdd) {
     const btn = target.button;
-    let menu = target.menu || resolveMenu(btn);
+    let menu = target.menu || (btn.getAttribute('aria-controls') ? document.getElementById(btn.getAttribute('aria-controls')) : null);
 
-    // Step 1: Open menu if not already open
     if (btn.getAttribute('aria-expanded') !== 'true') {
       btn.click();
       await sleep(350);
-      menu = menu || resolveMenu(btn);
+      menu = menu || (btn.getAttribute('aria-controls') ? document.getElementById(btn.getAttribute('aria-controls')) : null);
     }
 
     if (!menu) {
       throw new Error('eBay menu container could not be opened.');
     }
 
-    // Step 2: Locate search box
     const searchInput = menu.querySelector(
       'input[name*="search-box-"], input[placeholder*="Enter your own" i], input[aria-label*="Enter your own" i], .se-search-box input, input[type="text"]'
     );
 
     if (!searchInput) {
-      throw new Error('Could not find "Enter your own" input inside eBay dropdown.');
+      throw new Error('Could not find search input inside eBay dropdown.');
     }
 
     let addedCount = 0;
@@ -444,23 +509,19 @@
       const val = toAdd[i];
       showToast('Adding Part Numbers', `[${i + 1}/${toAdd.length}] Typing: "${val.slice(0, 22)}${val.length > 22 ? '...' : ''}"`);
 
-      // 1. Focus search input and clear it
       searchInput.focus();
       setNativeValue(searchInput, '');
       searchInput.dispatchEvent(new Event('input', { bubbles: true }));
       await sleep(100);
 
-      // 2. Type value and trigger input event
       setNativeValue(searchInput, val);
       searchInput.dispatchEvent(new Event('input', { bubbles: true }));
       await sleep(400);
 
-      // 3. Find custom option checkbox
       let customOption = menu.querySelector(
         '[name^="customOptions-"] [role="menuitemcheckbox"], .customOptions [role="menuitemcheckbox"]'
       );
 
-      // If not found by customOptions class, find by matching text
       if (!customOption) {
         const allItems = Array.from(menu.querySelectorAll('[role="menuitemcheckbox"]'));
         customOption = allItems.find(it => {
@@ -474,19 +535,16 @@
         addedCount++;
         await sleep(350);
       } else {
-        // Fallback: try pressing Enter on searchInput
         const ev = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true });
         searchInput.dispatchEvent(ev);
         await sleep(300);
       }
 
-      // Clear search box after commit
       setNativeValue(searchInput, '');
       searchInput.dispatchEvent(new Event('input', { bubbles: true }));
       await sleep(150);
     }
 
-    // Step 3: Cleanly close the menu
     if (btn.getAttribute('aria-expanded') === 'true') {
       btn.click();
       await sleep(250);
@@ -495,7 +553,6 @@
     return addedCount;
   }
 
-  // 8. Standard Combobox / Input Fallback Runner
   async function addViaStandardInput(target, toAdd) {
     const input = target.input;
     let addedCount = 0;
@@ -511,7 +568,6 @@
       input.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
       await sleep(120);
 
-      // Check for suggestion popup item
       const options = Array.from(document.querySelectorAll('[role="option"], .combobox__option, li[role="option"]'));
       const matched = options.find(opt => {
         const t = (opt.innerText || opt.textContent || '').trim().toLowerCase();
@@ -523,7 +579,6 @@
         addedCount++;
         await sleep(150);
       } else {
-        // Dispatch Enter
         ['keydown', 'keypress', 'keyup'].forEach(type => {
           const ev = new KeyboardEvent(type, { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true });
           input.dispatchEvent(ev);
@@ -539,7 +594,68 @@
     return addedCount;
   }
 
-  // 9. Main Workflow Runner
+  async function updateEbayMpn(mpnConfig, rows) {
+    const target = locateTargetField(mpnConfig);
+    if (!target) {
+      return { success: false, reason: 'MPN field not found' };
+    }
+
+    const existingBefore = extractExistingValues(target);
+    const toAdd = [];
+    const alreadyPresent = [];
+
+    for (const val of rows) {
+      if (existingBefore.has(val)) {
+        alreadyPresent.push(val);
+      } else {
+        toAdd.push(val);
+        existingBefore.add(val);
+      }
+    }
+
+    if (toAdd.length === 0) {
+      return {
+        success: true,
+        alreadyUpToDate: true,
+        added: 0,
+        duplicatesSkipped: alreadyPresent.length
+      };
+    }
+
+    let committedCount = 0;
+    try {
+      if (target.type === 'menu') {
+        committedCount = await addViaEbayMenu(target, toAdd);
+      } else {
+        committedCount = await addViaStandardInput(target, toAdd);
+      }
+    } catch (err) {
+      return { success: false, reason: err.message || String(err) };
+    }
+
+    await sleep(300);
+    const existingAfter = extractExistingValues(target);
+    let verifiedAdded = 0;
+    let failedToCommit = 0;
+
+    for (const val of toAdd) {
+      if (existingAfter.has(val)) {
+        verifiedAdded++;
+      } else {
+        failedToCommit++;
+      }
+    }
+
+    return {
+      success: true,
+      alreadyUpToDate: false,
+      added: verifiedAdded,
+      failed: failedToCommit,
+      duplicatesSkipped: alreadyPresent.length
+    };
+  }
+
+  // 7. Master Orchestrator
   async function run() {
     showToast('eBay Assistant', 'Reading clipboard content...');
 
@@ -552,7 +668,7 @@
     }
 
     if (!text || !text.trim()) {
-      showToast('Clipboard Empty', 'Click "Copy for eBay" in the tool first, then click this bookmark.', 'warn', 4500);
+      showToast('Clipboard Empty', 'Click a "Copy for eBay" button in the tool first, then click this bookmark.', 'warn', 4500);
       return;
     }
 
@@ -568,101 +684,82 @@
 
     if (!checkEbayPage(payload)) return;
 
-    const rows = Array.isArray(payload.rows) ? payload.rows.map(r => String(r).trim()).filter(Boolean) : [];
-    if (rows.length === 0) {
-      showToast('No Data', 'The copied content contains no part numbers to add.', 'warn', 4000);
+    // Resolve Title payload components
+    const hasTitle = (payload.title && (typeof payload.title === 'string' || payload.title.value)) ||
+                     (payload.action === 'UPDATE_TITLE' && payload.value);
+    const titleVal = (payload.title && typeof payload.title === 'string')
+      ? payload.title
+      : (payload.title && payload.title.value) || (payload.action === 'UPDATE_TITLE' ? payload.value : '');
+    const titleConfig = (payload.title && payload.title.target) || payload.target || {};
+
+    // Resolve MPN payload components
+    const mpnRows = Array.isArray(payload.rows)
+      ? payload.rows
+      : (payload.mpn && Array.isArray(payload.mpn.rows))
+        ? payload.mpn.rows
+        : [];
+    const mpnConfig = (payload.mpn && payload.mpn.target) || payload.target || {};
+
+    if (!hasTitle && mpnRows.length === 0) {
+      showToast('No Data', 'Copied content contains neither title nor part numbers to update.', 'warn', 4000);
       return;
     }
 
-    showToast('eBay Assistant', 'Checking existing part numbers...');
-    const targetConfig = payload.target || {};
-    const target = locateTargetField(targetConfig);
+    let titleResult = null;
+    let mpnResult = null;
 
-    if (!target) {
-      showToast('Field Not Found', 'Could not locate Manufacturer Part Number field. Make sure Item Specifics is visible.', 'error', 6000);
-      return;
+    // Step 1: Update Title if present
+    if (hasTitle && titleVal) {
+      showToast('eBay Assistant', 'Checking listing Title...');
+      titleResult = await updateEbayTitle(titleConfig, titleVal);
     }
 
-    // Step 1: Scan existing values on eBay page
-    const existingBefore = extractExistingValues(target);
-    const initialCount = existingBefore.size();
+    // Step 2: Update MPN if present
+    if (mpnRows.length > 0) {
+      showToast('eBay Assistant', 'Checking Manufacturer Part Numbers...');
+      mpnResult = await updateEbayMpn(mpnConfig, mpnRows);
+    }
 
-    // Step 2: Pre-filter rows into already-existing vs to-add
-    const toAdd = [];
-    const alreadyPresent = [];
+    // Step 3: Reporting & Feedback Toast
+    const summary = [];
+    let hasError = false;
 
-    for (const val of rows) {
-      if (existingBefore.has(val)) {
-        alreadyPresent.push(val);
+    if (titleResult) {
+      if (titleResult.success) {
+        if (titleResult.alreadyUpToDate) {
+          summary.push('Title: Already up to date');
+        } else {
+          summary.push('Title: Updated');
+        }
       } else {
-        toAdd.push(val);
-        // Track intra-batch duplicates so same row isn't added twice in 1 run
-        existingBefore.add(val);
+        summary.push(`Title: Failed (${titleResult.reason})`);
+        hasError = true;
       }
     }
 
-    // Step 3: CRITICAL PRE-FLIGHT CHECK - If ALL items already exist, STOP IMMEDIATELY!
-    if (toAdd.length === 0) {
-      showToast(
-        'Already Up to Date',
-        `All <b>${alreadyPresent.length}</b> part number${alreadyPresent.length > 1 ? 's' : ''} already exist in this listing. (0 added)`,
-        'info',
-        4500
-      );
-      return;
-    }
-
-    // Step 4: Add new items
-    showToast('eBay Assistant', `Adding ${toAdd.length} new part number(s)... (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)`);
-
-    let committedCount = 0;
-    if (target.type === 'menu') {
-      committedCount = await addViaEbayMenu(target, toAdd);
-    } else {
-      committedCount = await addViaStandardInput(target, toAdd);
-    }
-
-    // Step 5: Post-Flight Verification
-    await sleep(300);
-    const existingAfter = extractExistingValues(target);
-
-    let verifiedAdded = 0;
-    let failedToCommit = 0;
-
-    for (const val of toAdd) {
-      if (existingAfter.has(val)) {
-        verifiedAdded++;
+    if (mpnResult) {
+      if (mpnResult.success) {
+        if (mpnResult.alreadyUpToDate) {
+          summary.push(`MPN: All ${mpnResult.duplicatesSkipped} already present`);
+        } else {
+          const skip = mpnResult.duplicatesSkipped > 0 ? ` (${mpnResult.duplicatesSkipped} skipped)` : '';
+          summary.push(`MPN: Added ${mpnResult.added}${skip}`);
+        }
       } else {
-        failedToCommit++;
+        summary.push(`MPN: Failed (${mpnResult.reason})`);
+        hasError = true;
       }
     }
 
-    // Step 6: Honest, informative user feedback
-    const skipText = alreadyPresent.length > 0 ? ` (${alreadyPresent.length} duplicate${alreadyPresent.length > 1 ? 's' : ''} skipped)` : '';
+    const allUpToDate = (titleResult ? titleResult.alreadyUpToDate : true) &&
+                        (mpnResult ? mpnResult.alreadyUpToDate : true);
 
-    if (verifiedAdded > 0 && failedToCommit === 0) {
-      showToast(
-        'Success',
-        `Added <b>${verifiedAdded}</b> part number${verifiedAdded > 1 ? 's' : ''} to listing!${skipText}`,
-        'success',
-        5000
-      );
-    } else if (verifiedAdded > 0 && failedToCommit > 0) {
-      showToast(
-        'Partial Success',
-        `Added <b>${verifiedAdded}</b>, but <b>${failedToCommit}</b> could not be committed by eBay.${skipText}`,
-        'warn',
-        6000
-      );
-    } else if (verifiedAdded === 0 && failedToCommit > 0) {
-      showToast(
-        'eBay Did Not Commit',
-        `Could not commit ${failedToCommit} part number(s). Check eBay 65-character limit or format.${skipText}`,
-        'error',
-        7000
-      );
+    if (allUpToDate) {
+      showToast('Already Up to Date', summary.join('<br>'), 'info', 4500);
+    } else if (!hasError) {
+      showToast('Success', summary.join('<br>'), 'success', 5000);
     } else {
-      showToast('Already Up to Date', `All items already present in listing.${skipText}`, 'info', 4000);
+      showToast('Notice', summary.join('<br>'), 'warn', 6000);
     }
   }
 

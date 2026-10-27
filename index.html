@@ -14,6 +14,13 @@
     </svg>
     <span>eBay Bookmarklet</span>
   </button>
+    <button type="button" id="btn-master-copy-ebay" class="btn-master-copy-ebay" aria-label="Master Copy for eBay" title="Copy Title and Part Numbers for eBay Bookmarklet">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+    </svg>
+    <span>Master Copy for eBay</span>
+  </button>
   <button type="button" id="expand-all-modules" aria-label="Expand all sections" title="Expand all sections">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
       <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="#0D0D0D"></path>
@@ -204,6 +211,67 @@
       </div>
     </div>
   </div>
+  <div>
+    <span class="header">
+      <h1>🏷️ Listing Title Creator</h1>
+      <button disabled class="btn-reset" id="reset04" type="button" onclick="resetForm4()">
+        <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.243 17.242a6.04 6.04 0 0 1-1.37 1.028l.961 1.754a8.068 8.068 0 0 0 2.569-2.225l-1.6-1.201a5.938 5.938 0 0 1-.56.645zm1.743-4.671a5.975 5.975 0 0 1-.362 2.528l1.873.7a7.977 7.977 0 0 0 .483-3.371l-1.994.142zm1.512-2.368a8.048 8.048 0 0 0-1.841-2.859l-1.414 1.414a6.071 6.071 0 0 1 1.382 2.146l1.873-.7zm-8.128 8.763c-.047-.004-.094-.015-.141-.021a6.7 6.7 0 0 1-.468-.075 5.924 5.924 0 0 1-2.421-1.123 5.954 5.954 0 0 1-.583-.506 6.139 6.139 0 0 1-.516-.597 5.909 5.909 0 0 1-.891-1.634 6.086 6.086 0 0 1-.247-.902c-.008-.044-.012-.088-.02-.131A6.332 6.332 0 0 1 6 13.003v-.002c0-1.604.624-3.109 1.757-4.243a5.944 5.944 0 0 1 3.242-1.669v2.912L16 6l-5-4v3.069a7.917 7.917 0 0 0-4.656 2.276A7.936 7.936 0 0 0 4.001 13v.009c0 .253.014.504.037.753.007.076.021.149.029.227.021.172.044.345.076.516.02.1.044.196.067.295.032.142.065.284.105.423.032.112.07.223.107.333.026.079.047.159.076.237l.008-.003a7.948 7.948 0 0 0 1.095 1.996l-.007.004c.021.028.049.052.07.081.212.272.433.538.681.785a8.236 8.236 0 0 0 .965.816 8.073 8.073 0 0 0 .82.529l.028.02.001-.001a7.876 7.876 0 0 0 2.136.795l-.001.004.052.009c.201.043.405.071.61.098.069.009.139.023.207.029a8.038 8.038 0 0 0 2.532-.137l-.424-1.955a6.11 6.11 0 0 1-1.904.101z"/></svg>
+      </button>
+      <button disabled class="btn-save" id="save04" type="button" onclick="saveDefault04()">
+        <svg width="17" height="17" viewBox="0 0 0.51 0.51" xmlns="http://www.w3.org/2000/svg"><path d="M.503.131.379.007A.024.024 0 0 0 .363 0h-.34A.023.023 0 0 0 0 .023v.464C0 .5.01.51.023.51h.464C.5.51.51.5.51.487v-.34A.024.024 0 0 0 .503.131zM.139.047h.139v.124H.139zm0 .417V.34h.232v.124zm.325 0H.418V.317A.023.023 0 0 0 .395.294H.117a.023.023 0 0 0-.023.023v.147H.048V.047h.046v.147c0 .013.01.023.023.023h.185c.013 0 .023-.01.023-.023V.047h.029l.11.11z"/></svg>
+      </button>
+      <button type="button" class="btn-toggle" data-toggle="collapse" data-target=".collapse.fourth" aria-expanded="true" aria-label="Collapse Listing Title Creator">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" style="transition: transform 0.2s ease; transform: rotate(180deg);">
+          <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" fill="#0D0D0D"></path>
+        </svg>
+      </button>
+    </span>
+    <div class="Title-Creator-Main collapse show fourth">
+      <div class="form" id="inputform04">
+        <label>Years:</label>
+        <input type="text" id="title-years" placeholder="2015 - 2021" value="2015 - 2021">
+
+        <div style="display: inline-flex; width: 100%; gap: 10px;">
+          <div class="form" style="width: 45%;">
+            <label>Make:</label>
+            <input type="text" id="title-make" placeholder="VW" value="VW">
+          </div>
+          <div class="form" style="width: 55%;">
+            <label>Model:</label>
+            <input type="text" id="title-model" placeholder="GTI Golf" value="GTI Golf">
+          </div>
+        </div>
+
+        <label>OEM Section:</label>
+        <div class="radio-group">
+          <input type="checkbox" id="title-include-oem" name="title-oem" checked>
+          <label for="title-include-oem" class="RadioLabel">OEM</label>
+          <input type="checkbox" id="title-include-genuine" name="title-genuine">
+          <label for="title-include-genuine" class="RadioLabel">Genuine</label>
+        </div>
+
+        <label>Car Part Name:</label>
+        <input type="text" id="title-part-name" placeholder="Rear Console HVAC Vent Duct ASSEMBLY" value="Rear Console HVAC Vent Duct ASSEMBLY">
+
+        <label>Part Number:</label>
+        <input type="text" id="title-part-number" placeholder="5GM.819.203B" value="5GM.819.203B">
+      </div>
+
+      <div class="Title-Creator-Output form">
+        <label>Listing Title Output (<span id="title-char-count">0</span>/80):</label>
+        <div>
+          <span class="textarea" id="output04" role="textbox" contenteditable="false" readonly="readonly"></span>
+          <div class="card-text"><small class="text-muted" id="copy-status04">Click Output to copy</small></div>
+          <div class="mpn-output-actions">
+            <button type="button" id="btn-copy-ebay-title" class="btn-copy-ebay-simple" title="Copy listing title for the eBay Bookmarklet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy Title for eBay</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer class="app-footer">
@@ -230,16 +298,15 @@
         <p class="bm-lead">Quickly fills part numbers directly into your active eBay listing in one click.</p>
         <div class="bm-drag-box">
           <div class="bm-drag-hint">Drag this button up to your Bookmarks Bar:</div>
-          <a id="ebay-bookmarklet-link" class="bookmarklet-drag-btn" href="#" draggable="true" title="Fill eBay Listing v1.1.0 - Drag to Bookmarks bar">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            <span>Fill eBay Listing v1.1.0</span>
+          <a id="ebay-bookmarklet-link" class="bookmarklet-drag-btn" href="#" draggable="true" title="Fill eBay Listing v1.2.0 - Drag to Bookmarks bar">
+            <span>Fill eBay Listing v1.2.0</span>
           </a>
           <div class="bm-shortcut-hint">Bookmarks bar hidden? Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> (or <kbd>&#8984;</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd> on Mac)</div>
         </div>
         <div class="bm-workflow-steps">
-          <div class="bm-step"><span class="bm-step-num">1</span> Click <b>Copy for eBay</b> in the tool</div>
+          <div class="bm-step"><span class="bm-step-num">1</span> Click <b>Copy for eBay</b> or <b>Master Copy</b> in the tool</div>
           <div class="bm-step"><span class="bm-step-num">2</span> Switch to your eBay listing page</div>
-          <div class="bm-step"><span class="bm-step-num">3</span> Click <b>Fill eBay Listing v1.1.0</b> on your bookmarks bar</div>
+          <div class="bm-step"><span class="bm-step-num">3</span> Click <b>Fill eBay Listing v1.2.0</b> on your bookmarks bar</div>
         </div>
         <div class="bm-fallback-box">
           <button type="button" id="btn-copy-bm-code" class="btn-copy-code-minimal">
@@ -262,7 +329,7 @@
             <ol class="mobile-steps">
               <li>Tap <b>Copy Bookmarklet Code</b> below.</li>
               <li>Bookmark this page (or any webpage) in your mobile browser.</li>
-              <li>Edit the bookmark: name it <b>Fill eBay Listing v1.1.0</b>, delete its address/URL, and paste the code.</li>
+              <li>Edit the bookmark: name it <b>Fill eBay Listing v1.2.0</b>, delete its address/URL, and paste the code.</li>
               <li>On your eBay listing page, type <b>Fill eBay Listing</b> in the address bar and select the bookmark to run.</li>
             </ol>
             <button type="button" id="btn-copy-bm-code-mobile" class="btn-copy-code-minimal mobile-btn">

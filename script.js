@@ -616,9 +616,51 @@ document
 document
   .getElementById("inputform03")
   .addEventListener("change", updateOutput03);
-document
-  .getElementById("inputform03")
-  .addEventListener("input", updateOutput03);
+document.getElementById("inputform03").addEventListener("input", updateOutput03);
+
+const form04 = document.getElementById("inputform04");
+if (form04) {
+  form04.addEventListener("change", updateOutput04);
+  form04.addEventListener("input", updateOutput04);
+}
+
+const output04El = document.getElementById("output04");
+if (output04El) {
+  output04El.addEventListener("mousedown", function () {
+    const text = (output04El.innerText || "").trim();
+    if (!text) return;
+    const statusEl = document.getElementById("copy-status04");
+    const onDone = function () {
+      if (statusEl) {
+        statusEl.innerText = "Success! Copied to clipboard";
+        statusEl.classList.remove("failed");
+        statusEl.classList.add("success");
+        setTimeout(function () {
+          statusEl.innerText = "Click Output to copy";
+          statusEl.classList.remove("success");
+        }, 1200);
+      }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(onDone).catch(function () {
+        fallbackCopy(text, onDone, function () {
+          if (statusEl) {
+            statusEl.innerText = "Failed to copy!";
+            statusEl.classList.add("failed");
+          }
+        });
+      });
+    } else {
+      fallbackCopy(text, onDone, function () {
+        if (statusEl) {
+          statusEl.innerText = "Failed to copy!";
+          statusEl.classList.add("failed");
+        }
+      });
+    }
+  });
+}
+
 
 
 document.getElementById("option-four-custom").addEventListener("change", () => {
@@ -826,6 +868,248 @@ function resetForm3() {
 }
 
 
+// ==========================================
+// Card 4: Listing Title Creator Functions
+// ==========================================
+
+function updateOutput04() {
+  const saveBtn = document.getElementById("save04");
+  const resetBtn = document.getElementById("reset04");
+  if (saveBtn) saveBtn.disabled = false;
+  if (resetBtn) resetBtn.disabled = false;
+
+  const years = (document.getElementById("title-years")?.value || "").trim();
+  const make = (document.getElementById("title-make")?.value || "").trim();
+  const model = (document.getElementById("title-model")?.value || "").trim();
+  const includeOem = document.getElementById("title-include-oem")?.checked;
+  const includeGenuine = document.getElementById("title-include-genuine")?.checked;
+  const partName = (document.getElementById("title-part-name")?.value || "").trim();
+  const partNumber = (document.getElementById("title-part-number")?.value || "").trim();
+
+  const oemParts = [];
+  if (includeOem) oemParts.push("OEM");
+  if (includeGenuine) oemParts.push("Genuine");
+  const oemStr = oemParts.join(" ");
+
+  const baseParts = [years, make, model, oemStr, partName].filter(Boolean);
+  const baseTitle = baseParts.join(" ");
+
+  let finalTitle = baseTitle;
+  let pnOmitted = false;
+
+  if (partNumber) {
+    const candidate = baseTitle ? (baseTitle + " " + partNumber) : partNumber;
+    if (candidate.length <= 80) {
+      finalTitle = candidate;
+    } else {
+      pnOmitted = true;
+      finalTitle = baseTitle;
+    }
+  }
+
+  if (finalTitle.length > 80) {
+    finalTitle = finalTitle.slice(0, 80).trim();
+  }
+
+  const outputEl = document.getElementById("output04");
+  const countEl = document.getElementById("title-char-count");
+  const statusEl = document.getElementById("copy-status04");
+
+  if (outputEl) {
+    outputEl.innerText = finalTitle;
+  }
+
+  if (countEl) {
+    countEl.innerText = finalTitle.length;
+    if (finalTitle.length === 80) {
+      countEl.style.color = "#d97706";
+    } else if (finalTitle.length > 80) {
+      countEl.style.color = "#dc2626";
+    } else {
+      countEl.style.color = "";
+    }
+  }
+
+  if (statusEl && !statusEl.classList.contains("success") && !statusEl.classList.contains("failed")) {
+    if (pnOmitted) {
+      statusEl.innerText = "Click Output to copy (Part # omitted: exceeds 80 chars)";
+    } else {
+      statusEl.innerText = "Click Output to copy";
+    }
+  }
+
+  return finalTitle;
+}
+
+function resetForm4() {
+  const yearsEl = document.getElementById("title-years");
+  const makeEl = document.getElementById("title-make");
+  const modelEl = document.getElementById("title-model");
+  const oemEl = document.getElementById("title-include-oem");
+  const genuineEl = document.getElementById("title-include-genuine");
+  const partNameEl = document.getElementById("title-part-name");
+  const partNumberEl = document.getElementById("title-part-number");
+
+  if (yearsEl) yearsEl.value = "";
+  if (makeEl) makeEl.value = "";
+  if (modelEl) modelEl.value = "";
+  if (oemEl) oemEl.checked = true;
+  if (genuineEl) genuineEl.checked = false;
+  if (partNameEl) partNameEl.value = "";
+  if (partNumberEl) partNumberEl.value = "";
+
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("LTC.")) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+
+  updateOutput04();
+
+  const resetBtn = document.getElementById("reset04");
+  const saveBtn = document.getElementById("save04");
+  if (resetBtn) resetBtn.disabled = true;
+  if (saveBtn) saveBtn.disabled = true;
+}
+
+function saveDefault04() {
+  const Default = {
+    years: document.getElementById("title-years")?.value || "",
+    make: document.getElementById("title-make")?.value || "",
+    model: document.getElementById("title-model")?.value || "",
+    oem: document.getElementById("title-include-oem")?.checked,
+    genuine: document.getElementById("title-include-genuine")?.checked,
+    partName: document.getElementById("title-part-name")?.value || "",
+    partNumber: document.getElementById("title-part-number")?.value || ""
+  };
+
+  for (const [key, value] of Object.entries(Default)) {
+    localStorage.setItem("LTC." + key, value);
+  }
+
+  const saveBtn = document.getElementById("save04");
+  const resetBtn = document.getElementById("reset04");
+  if (saveBtn) saveBtn.disabled = true;
+  if (resetBtn) resetBtn.disabled = false;
+}
+
+function copyEbayTitlePayload() {
+  const statusEl = document.getElementById("copy-status04");
+  const titleText = (document.getElementById("output04")?.innerText || "").trim();
+
+  if (!titleText) {
+    if (statusEl) {
+      statusEl.innerText = "⚠️ Fill in title fields first!";
+      statusEl.classList.remove("success");
+      statusEl.classList.add("failed");
+      setTimeout(function () {
+        statusEl.innerText = "Click Output to copy";
+        statusEl.classList.remove("failed");
+      }, 1500);
+    }
+    return;
+  }
+
+  const payload = {
+    __protocol: "EBAY_TOOL_PAYLOAD",
+    version: "1.2",
+    action: "UPDATE_TITLE",
+    generatedAt: new Date().toISOString(),
+    pageMatch: ["ebay.com/lstng", "ebay.com/sl/", "ebay.com/itm/"],
+    target: DEFAULT_PAYLOAD_CONFIG.title,
+    value: titleText
+  };
+
+  const jsonStr = JSON.stringify(payload, null, 2);
+
+  const onCopied = function () {
+    if (statusEl) {
+      statusEl.innerText = "Success! Copied Title for eBay";
+      statusEl.classList.remove("failed");
+      statusEl.classList.add("success");
+      setTimeout(function () {
+        statusEl.innerText = "Click Output to copy";
+        statusEl.classList.remove("success");
+      }, 2200);
+    }
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(jsonStr).then(onCopied).catch(function () {
+      fallbackCopy(jsonStr, onCopied, function () {
+        if (statusEl) statusEl.innerText = "Failed to copy payload!";
+      });
+    });
+  } else {
+    fallbackCopy(jsonStr, onCopied, function () {
+      if (statusEl) statusEl.innerText = "Failed to copy payload!";
+    });
+  }
+}
+
+function copyMasterEbayPayload() {
+  const mpnRows = Array.from(document.querySelectorAll("#output01-container .mpn-output-item"))
+    .map(function (el) { return el.innerText.trim(); })
+    .filter(Boolean);
+
+  const titleText = (document.getElementById("output04")?.innerText || "").trim();
+
+  if (!titleText && mpnRows.length === 0) {
+    alert("Please enter a Listing Title or Part Numbers first!");
+    return;
+  }
+
+  const payload = {
+    __protocol: "EBAY_TOOL_PAYLOAD",
+    version: "1.2",
+    action: "MASTER_UPDATE",
+    generatedAt: new Date().toISOString(),
+    pageMatch: ["ebay.com/lstng", "ebay.com/sl/", "ebay.com/itm/"],
+    title: titleText ? {
+      value: titleText,
+      target: DEFAULT_PAYLOAD_CONFIG.title
+    } : null,
+    mpn: mpnRows.length > 0 ? {
+      rows: mpnRows,
+      target: DEFAULT_PAYLOAD_CONFIG.mpn
+    } : null
+  };
+
+  const jsonStr = JSON.stringify(payload, null, 2);
+  const masterBtn = document.getElementById("btn-master-copy-ebay");
+  const origHtml = masterBtn ? masterBtn.innerHTML : "";
+
+  const onCopied = function () {
+    if (masterBtn) {
+      masterBtn.classList.add("btn-copied");
+      const parts = [];
+      if (titleText) parts.push("Title");
+      if (mpnRows.length > 0) parts.push(mpnRows.length + " MPN" + (mpnRows.length > 1 ? "s" : ""));
+      const label = masterBtn.querySelector("span");
+      if (label) label.textContent = "✓ Copied (" + parts.join(" + ") + ")";
+      setTimeout(function () {
+        masterBtn.classList.remove("btn-copied");
+        if (origHtml) masterBtn.innerHTML = origHtml;
+      }, 2500);
+    }
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(jsonStr).then(onCopied).catch(function () {
+      fallbackCopy(jsonStr, onCopied, function () {
+        alert("Failed to copy Master payload to clipboard.");
+      });
+    });
+  } else {
+    fallbackCopy(jsonStr, onCopied, function () {
+      alert("Failed to copy Master payload to clipboard.");
+    });
+  }
+}
+
 function saveDefault01() {
   var Default = {};
   Default.v1 = document.querySelector('#inputform01 input[name="selector"]:checked').id;
@@ -950,6 +1234,38 @@ window.onload = function(event) {
     document.getElementById("section-3").checked = JSON.parse(localStorage.getItem("TG.v7"));
   }
 
+  if (localStorage.getItem("LTC.years") !== null) {
+    document.getElementById("title-years").value = localStorage.getItem("LTC.years");
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.make") !== null) {
+    document.getElementById("title-make").value = localStorage.getItem("LTC.make");
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.model") !== null) {
+    document.getElementById("title-model").value = localStorage.getItem("LTC.model");
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.oem") !== null) {
+    document.getElementById("title-include-oem").checked = JSON.parse(localStorage.getItem("LTC.oem"));
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.genuine") !== null) {
+    document.getElementById("title-include-genuine").checked = JSON.parse(localStorage.getItem("LTC.genuine"));
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.partName") !== null) {
+    document.getElementById("title-part-name").value = localStorage.getItem("LTC.partName");
+    document.getElementById("reset04").disabled = false;
+  }
+  if (localStorage.getItem("LTC.partNumber") !== null) {
+    document.getElementById("title-part-number").value = localStorage.getItem("LTC.partNumber");
+    document.getElementById("reset04").disabled = false;
+  }
+
+  updateOutput04();
+
+
 
   syncMpnRowButtons();
   updateOutput01();
@@ -961,10 +1277,23 @@ window.onload = function(event) {
 // eBay Bookmarklet Assistant & Payload Export
 // ==========================================
 
-const EBAY_BOOKMARKLET_CODE = "javascript:(function%20()%20%7B%20'use%20strict';%20const%20ENGINE_VERSION%20=%20'1.1.0';%20const%20TOAST_ID%20=%20'__ebay_assistant_toast__';%20function%20showToast(title,%20message,%20type%20=%20'info',%20autoCloseMs%20=%200)%20%7B%20let%20toast%20=%20document.getElementById(TOAST_ID);%20if%20(!toast)%20%7B%20toast%20=%20document.createElement('div');%20toast.id%20=%20TOAST_ID;%20toast.style.cssText%20=%20%5B%20'position:%20fixed',%20'top:%2016px',%20'right:%2016px',%20'width:%20340px',%20'max-width:%20calc(100vw%20-%2032px)',%20'background:%20#111827',%20'color:%20#ffffff',%20'border-radius:%208px',%20'box-shadow:%200%2010px%2025px%20rgba(0,0,0,0.35)',%20'z-index:%202147483647',%20'font-family:%20-apple-system,%20BlinkMacSystemFont,%20%22Segoe%20UI%22,%20Roboto,%20sans-serif',%20'font-size:%2013px',%20'line-height:%201.4',%20'padding:%2012px%2014px',%20'box-sizing:%20border-box',%20'display:%20flex',%20'flex-direction:%20column',%20'gap:%204px',%20'transition:%20opacity%200.25s%20ease,%20transform%200.25s%20ease'%20%5D.join(';');%20const%20topRow%20=%20document.createElement('div');%20topRow.style.cssText%20=%20'display:%20flex;%20justify-content:%20space-between;%20align-items:%20center;%20font-weight:%20700;%20font-size:%2013px;';%20const%20titleSpan%20=%20document.createElement('span');%20titleSpan.id%20=%20TOAST_ID%20+%20'_title';%20const%20closeBtn%20=%20document.createElement('button');%20closeBtn.innerText%20=%20'%E2%9C%95';%20closeBtn.style.cssText%20=%20'background:%20none;%20border:%20none;%20color:%20#9ca3af;%20cursor:%20pointer;%20padding:%200%202px;%20font-size:%2014px;%20line-height:%201;';%20closeBtn.onclick%20=%20()%20=%3E%20removeToast();%20topRow.appendChild(titleSpan);%20topRow.appendChild(closeBtn);%20const%20msgDiv%20=%20document.createElement('div');%20msgDiv.id%20=%20TOAST_ID%20+%20'_msg';%20msgDiv.style.cssText%20=%20'color:%20#d1d5db;%20font-size:%2012px;%20white-space:%20normal;%20line-height:%201.4;';%20toast.appendChild(topRow);%20toast.appendChild(msgDiv);%20document.body.appendChild(toast);%20%7D%20const%20titleEl%20=%20document.getElementById(TOAST_ID%20+%20'_title');%20const%20msgEl%20=%20document.getElementById(TOAST_ID%20+%20'_msg');%20const%20icon%20=%20type%20===%20'success'%20?%20'%E2%9C%85'%20:%20type%20===%20'error'%20?%20'%E2%9D%8C'%20:%20type%20===%20'warn'%20?%20'%E2%9A%A0%EF%B8%8F'%20:%20'%E2%9A%A1';%20const%20accent%20=%20type%20===%20'success'%20?%20'#22c55e'%20:%20type%20===%20'error'%20?%20'#ef4444'%20:%20type%20===%20'warn'%20?%20'#f59e0b'%20:%20'#38bdf8';%20if%20(titleEl)%20%7B%20titleEl.style.color%20=%20accent;%20titleEl.innerHTML%20=%20icon%20+%20'%20'%20+%20title;%20%7D%20if%20(msgEl)%20%7B%20msgEl.innerHTML%20=%20message;%20%7D%20if%20(autoCloseMs%20%3E%200)%20%7B%20setTimeout(removeToast,%20autoCloseMs);%20%7D%20%7D%20function%20removeToast()%20%7B%20const%20toast%20=%20document.getElementById(TOAST_ID);%20if%20(toast%20&&%20toast.isConnected)%20%7B%20toast.style.opacity%20=%20'0';%20toast.style.transform%20=%20'translateY(-8px)';%20setTimeout(()%20=%3E%20toast.remove(),%20250);%20%7D%20%7D%20const%20sleep%20=%20(ms)%20=%3E%20new%20Promise(r%20=%3E%20setTimeout(r,%20ms));%20function%20normalize(str)%20%7B%20return%20(str%20%7C%7C%20'')%20.replace(/%5B%5Cu00A0%5Cu1680%5Cu2000-%5Cu200B%5Cu2028%5Cu2029%5Cu202F%5Cu205F%5Cu3000%5CuFEFF%5D/g,%20'%20')%20.replace(/%5Cs+/g,%20'%20')%20.trim()%20.toUpperCase();%20%7D%20function%20normalizeClean(str)%20%7B%20return%20normalize(str).replace(/%5B%5EA-Z0-9%5D/g,%20'');%20%7D%20function%20cleanEbayItemText(el)%20%7B%20if%20(!el)%20return%20'';%20try%20%7B%20const%20clone%20=%20el.cloneNode(true);%20clone.querySelectorAll('.clipped,%20svg,%20button').forEach(x%20=%3E%20x.remove());%20return%20(clone.textContent%20%7C%7C%20'').trim();%20%7D%20catch%20(e)%20%7B%20return%20(el.textContent%20%7C%7C%20'').trim();%20%7D%20%7D%20function%20createValueTracker()%20%7B%20const%20exactSet%20=%20new%20Set();%20const%20cleanSet%20=%20new%20Set();%20let%20containerCleanText%20=%20'';%20function%20add(str)%20%7B%20if%20(!str)%20return;%20const%20stripped%20=%20String(str).replace(/%5Cs*%5C(%5C+%5Cd+%5C)%5Cs*$/g,%20'').trim();%20const%20norm%20=%20normalize(stripped);%20if%20(!norm)%20return;%20exactSet.add(norm);%20const%20cl%20=%20normalizeClean(norm);%20if%20(cl)%20cleanSet.add(cl);%20if%20(/%5B%5C/;%7C%5D/.test(norm))%20%7B%20norm.split(/%5B%5C/;%7C%5D/).map(s%20=%3E%20s.trim()).filter(Boolean).forEach(part%20=%3E%20%7B%20exactSet.add(part);%20const%20cp%20=%20normalizeClean(part);%20if%20(cp)%20cleanSet.add(cp);%20%7D);%20%7D%20%7D%20function%20setContainerRawText(txt)%20%7B%20if%20(txt)%20%7B%20containerCleanText%20=%20normalizeClean(txt);%20%7D%20%7D%20function%20has(val)%20%7B%20if%20(!val)%20return%20false;%20const%20norm%20=%20normalize(val);%20if%20(!norm)%20return%20false;%20if%20(exactSet.has(norm))%20return%20true;%20const%20cl%20=%20normalizeClean(norm);%20if%20(cl%20&&%20cleanSet.has(cl))%20return%20true;%20if%20(/%5B%5C/;%7C%5D/.test(norm))%20%7B%20const%20parts%20=%20norm.split(/%5B%5C/;%7C%5D/).map(s%20=%3E%20s.trim()).filter(Boolean);%20for%20(const%20p%20of%20parts)%20%7B%20if%20(exactSet.has(p))%20return%20true;%20const%20cp%20=%20normalizeClean(p);%20if%20(cp%20&&%20cleanSet.has(cp))%20return%20true;%20if%20(cp%20&&%20cp.length%20%3E=%204%20&&%20containerCleanText.includes(cp))%20return%20true;%20%7D%20%7D%20if%20(cl%20&&%20cl.length%20%3E=%204%20&&%20containerCleanText.includes(cl))%20%7B%20return%20true;%20%7D%20for%20(const%20item%20of%20exactSet)%20%7B%20if%20(item.endsWith('...')%20&&%20norm.startsWith(item.slice(0,%20-3)))%20return%20true;%20if%20(norm.endsWith('...')%20&&%20item.startsWith(norm.slice(0,%20-3)))%20return%20true;%20%7D%20return%20false;%20%7D%20return%20%7B%20add,%20has,%20setContainerRawText,%20size:%20()%20=%3E%20exactSet.size,%20getAll:%20()%20=%3E%20Array.from(exactSet)%20%7D;%20%7D%20function%20checkEbayPage(payload)%20%7B%20const%20host%20=%20window.location.hostname.toLowerCase();%20const%20url%20=%20window.location.href.toLowerCase();%20if%20(!host.includes('ebay.'))%20%7B%20showToast('Wrong%20Website',%20'Please%20open%20your%20eBay%20listing%20page%20to%20run%20this%20tool.',%20'error',%205000);%20return%20false;%20%7D%20const%20matches%20=%20(payload%20&&%20Array.isArray(payload.pageMatch)%20&&%20payload.pageMatch.length%20%3E%200)%20?%20payload.pageMatch%20:%20%5B'lstng',%20'sl/',%20'itm',%20'draft',%20'sell'%5D;%20const%20isListing%20=%20matches.some(m%20=%3E%20url.includes(m.toLowerCase()));%20if%20(!isListing)%20%7B%20showToast('Not%20a%20Listing%20Page',%20'Please%20navigate%20to%20an%20active%20eBay%20listing%20draft/edit%20page.',%20'warn',%205000);%20return%20false;%20%7D%20return%20true;%20%7D%20function%20locateTargetField(targetConfig)%20%7B%20const%20aliases%20=%20(targetConfig%20&&%20targetConfig.aliases)%20%7C%7C%20%5B'Manufacturer%20Part%20Number',%20'MPN',%20'Part%20Number'%5D;%20const%20customSelectors%20=%20(targetConfig%20&&%20targetConfig.selectors)%20%7C%7C%20%5B%5D;%20function%20isMenuButton(btn)%20%7B%20if%20(!btn)%20return%20false;%20const%20controls%20=%20btn.getAttribute('aria-controls');%20const%20cls%20=%20btn.className%20%7C%7C%20'';%20return%20!!(controls%20%7C%7C%20cls.includes('fake-menu-button')%20%7C%7C%20cls.includes('se-expand-button'));%20%7D%20function%20resolveMenu(btn)%20%7B%20const%20controlsId%20=%20btn.getAttribute('aria-controls');%20if%20(controlsId)%20%7B%20const%20m%20=%20document.getElementById(controlsId);%20if%20(m)%20return%20m;%20%7D%20return%20btn.parentElement?.querySelector('.fake-menu-button__menu')%20%7C%7C%20btn.closest('.fake-menu-button')?.querySelector('.fake-menu-button__menu')%20%7C%7C%20btn.parentElement?.parentElement?.querySelector('.fake-menu-button__menu');%20%7D%20for%20(const%20a%20of%20aliases)%20%7B%20const%20btnByName%20=%20document.querySelector(%60button%5Bname=%22attributes.$%7Ba%7D%22%20i%5D%60)%20%7C%7C%20document.querySelector(%60button%5Bname*=%22$%7Ba%7D%22%20i%5D%60);%20if%20(btnByName%20&&%20btnByName.isConnected)%20%7B%20const%20row%20=%20btnByName.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields,%20.summary__attributes--field,%20tr,%20fieldset')%20%7C%7C%20btnByName.parentElement;%20return%20%7B%20type:%20'menu',%20button:%20btnByName,%20menu:%20resolveMenu(btnByName),%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20const%20labelCandidates%20=%20Array.from(document.querySelectorAll('label,%20button.fake-link,%20%5Bdata-aspect-name%5D,%20%5Bdata-name%5D,%20span.field__label,%20.summary__attributes--label'));%20for%20(const%20node%20of%20labelCandidates)%20%7B%20const%20text%20=%20(node.innerText%20%7C%7C%20node.textContent%20%7C%7C%20'').trim();%20const%20aspectAttr%20=%20(node.getAttribute('data-aspect-name')%20%7C%7C%20node.getAttribute('data-name')%20%7C%7C%20'').trim();%20for%20(const%20a%20of%20aliases)%20%7B%20const%20al%20=%20a.toLowerCase();%20const%20matchesAspect%20=%20aspectAttr.toLowerCase()%20===%20al%20%7C%7C%20aspectAttr.toLowerCase().includes(al);%20const%20matchesText%20=%20text.toLowerCase()%20===%20al%20%7C%7C%20(text.toLowerCase().includes(al)%20&&%20text.length%20%3C%20al.length%20+%2018);%20if%20(matchesAspect%20%7C%7C%20matchesText)%20%7B%20const%20row%20=%20node.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields,%20.summary__attributes--field,%20%5Bclass*=%22aspect%22%5D,%20%5Bclass*=%22specific%22%5D,%20tr,%20fieldset')%20%7C%7C%20node.parentElement?.parentElement;%20if%20(row)%20%7B%20const%20btn%20=%20row.querySelector('button.fake-menu-button__button,%20button.se-expand-button__button,%20button%5Baria-controls%5D,%20button%5Bname%5E=%22attributes.%22%5D');%20if%20(btn%20&&%20isMenuButton(btn))%20%7B%20return%20%7B%20type:%20'menu',%20button:%20btn,%20menu:%20resolveMenu(btn),%20container:%20row,%20label:%20a%20%7D;%20%7D%20const%20inp%20=%20row.querySelector('input%5Btype=%22text%22%5D,%20input:not(%5Btype%5D),%20%5Brole=%22combobox%22%5D');%20if%20(inp%20&&%20inp.isConnected)%20%7B%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20%7D%20%7D%20%7D%20for%20(const%20sel%20of%20customSelectors)%20%7B%20try%20%7B%20const%20el%20=%20document.querySelector(sel);%20if%20(el%20&&%20el.isConnected)%20%7B%20if%20(el.tagName%20===%20'BUTTON'%20&&%20isMenuButton(el))%20%7B%20const%20row%20=%20el.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20el.parentElement;%20return%20%7B%20type:%20'menu',%20button:%20el,%20menu:%20resolveMenu(el),%20container:%20row,%20label:%20'Custom%20Selector'%20%7D;%20%7D%20const%20inp%20=%20el.tagName%20===%20'INPUT'%20?%20el%20:%20el.querySelector('input');%20if%20(inp%20&&%20inp.isConnected)%20%7B%20const%20row%20=%20inp.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20inp.parentElement;%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20'Custom%20Selector'%20%7D;%20%7D%20%7D%20%7D%20catch%20(e)%20%7B%7D%20%7D%20const%20allInputs%20=%20Array.from(document.querySelectorAll('input%5Btype=%22text%22%5D,%20input:not(%5Btype%5D),%20%5Brole=%22combobox%22%5D'));%20for%20(const%20inp%20of%20allInputs)%20%7B%20const%20aria%20=%20(inp.getAttribute('aria-label')%20%7C%7C%20'').toLowerCase();%20const%20ph%20=%20(inp.placeholder%20%7C%7C%20'').toLowerCase();%20const%20name%20=%20(inp.name%20%7C%7C%20'').toLowerCase();%20for%20(const%20a%20of%20aliases)%20%7B%20const%20al%20=%20a.toLowerCase();%20if%20(aria.includes(al)%20%7C%7C%20ph.includes(al)%20%7C%7C%20name.includes(al))%20%7B%20const%20row%20=%20inp.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20inp.parentElement;%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20%7D%20return%20null;%20%7D%20function%20extractExistingValues(target)%20%7B%20const%20tracker%20=%20createValueTracker();%20if%20(target.container)%20%7B%20tracker.setContainerRawText(target.container.innerText%20%7C%7C%20target.container.textContent%20%7C%7C%20'');%20%7D%20if%20(target.type%20===%20'menu'%20&&%20target.button)%20%7B%20const%20btnText%20=%20target.button.innerText%20%7C%7C%20target.button.textContent%20%7C%7C%20'';%20const%20cleanBtnText%20=%20btnText.replace(/%5Cs*%5C(%5C+%5Cd+%5C)%5Cs*$/g,%20'').trim();%20if%20(cleanBtnText%20&&%20!/%5E(select%7Center%20your%20own%7C-%20select%20-)$/i.test(cleanBtnText))%20%7B%20tracker.add(cleanBtnText);%20%7D%20const%20menu%20=%20target.menu%20%7C%7C%20resolveMenu(target.button);%20if%20(menu)%20%7B%20const%20selectedItems%20=%20Array.from(menu.querySelectorAll(%20'%5Bname%5E=%22selectedOptions-%22%5D%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D,%20.selectedOptions%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D,%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D'%20));%20selectedItems.forEach(item%20=%3E%20%7B%20const%20textEl%20=%20item.querySelector('.filter-menu__text')%20%7C%7C%20item;%20const%20txt%20=%20cleanEbayItemText(textEl);%20if%20(txt)%20tracker.add(txt);%20%7D);%20%7D%20%7D%20else%20if%20(target.type%20===%20'input'%20&&%20target.container)%20%7B%20const%20chipElements%20=%20Array.from(target.container.querySelectorAll(%20'.chip,%20%5Bclass*=%22chip%22%5D,%20.pill,%20%5Bclass*=%22pill%22%5D,%20.token,%20%5Bclass*=%22token%22%5D,%20.tag,%20%5Bclass*=%22tag%22%5D,%20%5Bclass*=%22chips-combobox__item%22%5D,%20li%5Brole=%22listitem%22%5D'%20));%20chipElements.forEach(el%20=%3E%20%7B%20if%20(el%20===%20target.input%20%7C%7C%20(el.contains%20&&%20el.contains(target.input)))%20return;%20const%20txt%20=%20cleanEbayItemText(el);%20if%20(txt)%20tracker.add(txt);%20%7D);%20const%20removeButtons%20=%20Array.from(target.container.querySelectorAll(%20'button%5Baria-label*=%22remove%22%20i%5D,%20button%5Baria-label*=%22delete%22%20i%5D,%20%5Baria-label*=%22remove%22%20i%5D'%20));%20removeButtons.forEach(btn%20=%3E%20%7B%20const%20aria%20=%20btn.getAttribute('aria-label')%20%7C%7C%20'';%20const%20m%20=%20aria.match(/(?:remove%7Cdelete%7Cclose%7Cclear)%5Cs+(.+)/i);%20if%20(m%20&&%20m%5B1%5D)%20tracker.add(m%5B1%5D);%20%7D);%20if%20(target.input%20&&%20target.input.value)%20%7B%20tracker.add(target.input.value);%20%7D%20%7D%20return%20tracker;%20%7D%20function%20setNativeValue(input,%20value)%20%7B%20const%20lastValue%20=%20input.value;%20const%20setter%20=%20Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,%20'value')?.set;%20if%20(setter)%20%7B%20setter.call(input,%20value);%20%7D%20else%20%7B%20input.value%20=%20value;%20%7D%20if%20(input._valueTracker)%20%7B%20try%20%7B%20input._valueTracker.setValue(lastValue);%20%7D%20catch%20(e)%20%7B%7D%20%7D%20%7D%20async%20function%20addViaEbayMenu(target,%20toAdd)%20%7B%20const%20btn%20=%20target.button;%20let%20menu%20=%20target.menu%20%7C%7C%20resolveMenu(btn);%20if%20(btn.getAttribute('aria-expanded')%20!==%20'true')%20%7B%20btn.click();%20await%20sleep(350);%20menu%20=%20menu%20%7C%7C%20resolveMenu(btn);%20%7D%20if%20(!menu)%20%7B%20throw%20new%20Error('eBay%20menu%20container%20could%20not%20be%20opened.');%20%7D%20const%20searchInput%20=%20menu.querySelector(%20'input%5Bname*=%22search-box-%22%5D,%20input%5Bplaceholder*=%22Enter%20your%20own%22%20i%5D,%20input%5Baria-label*=%22Enter%20your%20own%22%20i%5D,%20.se-search-box%20input,%20input%5Btype=%22text%22%5D'%20);%20if%20(!searchInput)%20%7B%20throw%20new%20Error('Could%20not%20find%20%22Enter%20your%20own%22%20input%20inside%20eBay%20dropdown.');%20%7D%20let%20addedCount%20=%200;%20for%20(let%20i%20=%200;%20i%20%3C%20toAdd.length;%20i++)%20%7B%20const%20val%20=%20toAdd%5Bi%5D;%20showToast('Adding%20Part%20Numbers',%20%60%5B$%7Bi%20+%201%7D/$%7BtoAdd.length%7D%5D%20Typing:%20%22$%7Bval.slice(0,%2022)%7D$%7Bval.length%20%3E%2022%20?%20'...'%20:%20''%7D%22%60);%20searchInput.focus();%20setNativeValue(searchInput,%20'');%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(100);%20setNativeValue(searchInput,%20val);%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(400);%20let%20customOption%20=%20menu.querySelector(%20'%5Bname%5E=%22customOptions-%22%5D%20%5Brole=%22menuitemcheckbox%22%5D,%20.customOptions%20%5Brole=%22menuitemcheckbox%22%5D'%20);%20if%20(!customOption)%20%7B%20const%20allItems%20=%20Array.from(menu.querySelectorAll('%5Brole=%22menuitemcheckbox%22%5D'));%20customOption%20=%20allItems.find(it%20=%3E%20%7B%20const%20txt%20=%20cleanEbayItemText(it);%20return%20normalizeClean(txt)%20===%20normalizeClean(val);%20%7D);%20%7D%20if%20(customOption)%20%7B%20customOption.click();%20addedCount++;%20await%20sleep(350);%20%7D%20else%20%7B%20const%20ev%20=%20new%20KeyboardEvent('keydown',%20%7B%20key:%20'Enter',%20code:%20'Enter',%20keyCode:%2013,%20which:%2013,%20bubbles:%20true%20%7D);%20searchInput.dispatchEvent(ev);%20await%20sleep(300);%20%7D%20setNativeValue(searchInput,%20'');%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(150);%20%7D%20if%20(btn.getAttribute('aria-expanded')%20===%20'true')%20%7B%20btn.click();%20await%20sleep(250);%20%7D%20return%20addedCount;%20%7D%20async%20function%20addViaStandardInput(target,%20toAdd)%20%7B%20const%20input%20=%20target.input;%20let%20addedCount%20=%200;%20for%20(let%20i%20=%200;%20i%20%3C%20toAdd.length;%20i++)%20%7B%20const%20val%20=%20toAdd%5Bi%5D;%20showToast('Adding%20Part%20Numbers',%20%60%5B$%7Bi%20+%201%7D/$%7BtoAdd.length%7D%5D%20Entering:%20%22$%7Bval.slice(0,%2022)%7D...%22%60);%20input.focus();%20await%20sleep(60);%20setNativeValue(input,%20val);%20input.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20input.dispatchEvent(new%20Event('change',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20await%20sleep(120);%20const%20options%20=%20Array.from(document.querySelectorAll('%5Brole=%22option%22%5D,%20.combobox__option,%20li%5Brole=%22option%22%5D'));%20const%20matched%20=%20options.find(opt%20=%3E%20%7B%20const%20t%20=%20(opt.innerText%20%7C%7C%20opt.textContent%20%7C%7C%20'').trim().toLowerCase();%20return%20t%20===%20val.toLowerCase();%20%7D);%20if%20(matched%20&&%20typeof%20matched.click%20===%20'function')%20%7B%20matched.click();%20addedCount++;%20await%20sleep(150);%20%7D%20else%20%7B%20%5B'keydown',%20'keypress',%20'keyup'%5D.forEach(type%20=%3E%20%7B%20const%20ev%20=%20new%20KeyboardEvent(type,%20%7B%20key:%20'Enter',%20code:%20'Enter',%20keyCode:%2013,%20which:%2013,%20bubbles:%20true,%20cancelable:%20true%20%7D);%20input.dispatchEvent(ev);%20%7D);%20addedCount++;%20await%20sleep(150);%20%7D%20if%20(typeof%20input.blur%20===%20'function')%20input.blur();%20await%20sleep(120);%20%7D%20return%20addedCount;%20%7D%20async%20function%20run()%20%7B%20showToast('eBay%20Assistant',%20'Reading%20clipboard%20content...');%20let%20text%20=%20'';%20try%20%7B%20text%20=%20await%20navigator.clipboard.readText();%20%7D%20catch%20(e)%20%7B%20showToast('Clipboard%20Access%20Denied',%20'Please%20click%20the%20bookmarklet%20again%20to%20allow%20clipboard%20access.',%20'error',%205000);%20return;%20%7D%20if%20(!text%20%7C%7C%20!text.trim())%20%7B%20showToast('Clipboard%20Empty',%20'Click%20%22Copy%20for%20eBay%22%20in%20the%20tool%20first,%20then%20click%20this%20bookmark.',%20'warn',%204500);%20return;%20%7D%20let%20payload;%20try%20%7B%20payload%20=%20JSON.parse(text);%20%7D%20catch%20(e)%20%7B%20payload%20=%20%7B%20action:%20'UPDATE_MPN',%20rows:%20text.split(/%5Cr?%5Cn/).map(s%20=%3E%20s.trim()).filter(Boolean)%20%7D;%20%7D%20if%20(!checkEbayPage(payload))%20return;%20const%20rows%20=%20Array.isArray(payload.rows)%20?%20payload.rows.map(r%20=%3E%20String(r).trim()).filter(Boolean)%20:%20%5B%5D;%20if%20(rows.length%20===%200)%20%7B%20showToast('No%20Data',%20'The%20copied%20content%20contains%20no%20part%20numbers%20to%20add.',%20'warn',%204000);%20return;%20%7D%20showToast('eBay%20Assistant',%20'Checking%20existing%20part%20numbers...');%20const%20targetConfig%20=%20payload.target%20%7C%7C%20%7B%7D;%20const%20target%20=%20locateTargetField(targetConfig);%20if%20(!target)%20%7B%20showToast('Field%20Not%20Found',%20'Could%20not%20locate%20Manufacturer%20Part%20Number%20field.%20Make%20sure%20Item%20Specifics%20is%20visible.',%20'error',%206000);%20return;%20%7D%20const%20existingBefore%20=%20extractExistingValues(target);%20const%20initialCount%20=%20existingBefore.size();%20const%20toAdd%20=%20%5B%5D;%20const%20alreadyPresent%20=%20%5B%5D;%20for%20(const%20val%20of%20rows)%20%7B%20if%20(existingBefore.has(val))%20%7B%20alreadyPresent.push(val);%20%7D%20else%20%7B%20toAdd.push(val);%20existingBefore.add(val);%20%7D%20%7D%20if%20(toAdd.length%20===%200)%20%7B%20showToast(%20'Already%20Up%20to%20Date',%20%60All%20%3Cb%3E$%7BalreadyPresent.length%7D%3C/b%3E%20part%20number$%7BalreadyPresent.length%20%3E%201%20?%20's'%20:%20''%7D%20already%20exist%20in%20this%20listing.%20(0%20added)%60,%20'info',%204500%20);%20return;%20%7D%20showToast('eBay%20Assistant',%20%60Adding%20$%7BtoAdd.length%7D%20new%20part%20number(s)...%20($%7BalreadyPresent.length%7D%20duplicate$%7BalreadyPresent.length%20%3E%201%20?%20's'%20:%20''%7D%20skipped)%60);%20let%20committedCount%20=%200;%20if%20(target.type%20===%20'menu')%20%7B%20committedCount%20=%20await%20addViaEbayMenu(target,%20toAdd);%20%7D%20else%20%7B%20committedCount%20=%20await%20addViaStandardInput(target,%20toAdd);%20%7D%20await%20sleep(300);%20const%20existingAfter%20=%20extractExistingValues(target);%20let%20verifiedAdded%20=%200;%20let%20failedToCommit%20=%200;%20for%20(const%20val%20of%20toAdd)%20%7B%20if%20(existingAfter.has(val))%20%7B%20verifiedAdded++;%20%7D%20else%20%7B%20failedToCommit++;%20%7D%20%7D%20const%20skipText%20=%20alreadyPresent.length%20%3E%200%20?%20%60%20($%7BalreadyPresent.length%7D%20duplicate$%7BalreadyPresent.length%20%3E%201%20?%20's'%20:%20''%7D%20skipped)%60%20:%20'';%20if%20(verifiedAdded%20%3E%200%20&&%20failedToCommit%20===%200)%20%7B%20showToast(%20'Success',%20%60Added%20%3Cb%3E$%7BverifiedAdded%7D%3C/b%3E%20part%20number$%7BverifiedAdded%20%3E%201%20?%20's'%20:%20''%7D%20to%20listing!$%7BskipText%7D%60,%20'success',%205000%20);%20%7D%20else%20if%20(verifiedAdded%20%3E%200%20&&%20failedToCommit%20%3E%200)%20%7B%20showToast(%20'Partial%20Success',%20%60Added%20%3Cb%3E$%7BverifiedAdded%7D%3C/b%3E,%20but%20%3Cb%3E$%7BfailedToCommit%7D%3C/b%3E%20could%20not%20be%20committed%20by%20eBay.$%7BskipText%7D%60,%20'warn',%206000%20);%20%7D%20else%20if%20(verifiedAdded%20===%200%20&&%20failedToCommit%20%3E%200)%20%7B%20showToast(%20'eBay%20Did%20Not%20Commit',%20%60Could%20not%20commit%20$%7BfailedToCommit%7D%20part%20number(s).%20Check%20eBay%2065-character%20limit%20or%20format.$%7BskipText%7D%60,%20'error',%207000%20);%20%7D%20else%20%7B%20showToast('Already%20Up%20to%20Date',%20%60All%20items%20already%20present%20in%20listing.$%7BskipText%7D%60,%20'info',%204000);%20%7D%20%7D%20run().catch(err%20=%3E%20%7B%20showToast('Error',%20(err%20&&%20err.message)%20?%20err.message%20:%20String(err),%20'error',%206000);%20%7D);%20%7D)();";
+const EBAY_BOOKMARKLET_CODE = "javascript:(function%20()%20%7B%20'use%20strict';%20const%20ENGINE_VERSION%20=%20'1.2.0';%20const%20TOAST_ID%20=%20'__ebay_assistant_toast__';%20function%20showToast(title,%20message,%20type%20=%20'info',%20autoCloseMs%20=%200)%20%7B%20let%20toast%20=%20document.getElementById(TOAST_ID);%20if%20(!toast)%20%7B%20toast%20=%20document.createElement('div');%20toast.id%20=%20TOAST_ID;%20toast.style.cssText%20=%20%5B%20'position:%20fixed',%20'top:%2016px',%20'right:%2016px',%20'width:%20350px',%20'max-width:%20calc(100vw%20-%2032px)',%20'background:%20%23111827',%20'color:%20%23ffffff',%20'border-radius:%208px',%20'box-shadow:%200%2010px%2025px%20rgba(0,0,0,0.35)',%20'z-index:%202147483647',%20'font-family:%20-apple-system,%20BlinkMacSystemFont,%20%22Segoe%20UI%22,%20Roboto,%20sans-serif',%20'font-size:%2013px',%20'line-height:%201.4',%20'padding:%2012px%2014px',%20'box-sizing:%20border-box',%20'display:%20flex',%20'flex-direction:%20column',%20'gap:%204px',%20'transition:%20opacity%200.25s%20ease,%20transform%200.25s%20ease'%20%5D.join(';');%20const%20topRow%20=%20document.createElement('div');%20topRow.style.cssText%20=%20'display:%20flex;%20justify-content:%20space-between;%20align-items:%20center;%20font-weight:%20700;%20font-size:%2013px;';%20const%20titleSpan%20=%20document.createElement('span');%20titleSpan.id%20=%20TOAST_ID%20+%20'_title';%20const%20closeBtn%20=%20document.createElement('button');%20closeBtn.innerText%20=%20'%E2%9C%95';%20closeBtn.style.cssText%20=%20'background:%20none;%20border:%20none;%20color:%20%239ca3af;%20cursor:%20pointer;%20padding:%200%202px;%20font-size:%2014px;%20line-height:%201;';%20closeBtn.onclick%20=%20()%20=%3E%20removeToast();%20topRow.appendChild(titleSpan);%20topRow.appendChild(closeBtn);%20const%20msgDiv%20=%20document.createElement('div');%20msgDiv.id%20=%20TOAST_ID%20+%20'_msg';%20msgDiv.style.cssText%20=%20'color:%20%23d1d5db;%20font-size:%2012px;%20white-space:%20normal;%20line-height:%201.4;';%20toast.appendChild(topRow);%20toast.appendChild(msgDiv);%20document.body.appendChild(toast);%20%7D%20const%20titleEl%20=%20document.getElementById(TOAST_ID%20+%20'_title');%20const%20msgEl%20=%20document.getElementById(TOAST_ID%20+%20'_msg');%20const%20icon%20=%20type%20===%20'success'%20?%20'%E2%9C%85'%20:%20type%20===%20'error'%20?%20'%E2%9D%8C'%20:%20type%20===%20'warn'%20?%20'%E2%9A%A0%EF%B8%8F'%20:%20'%E2%9A%A1';%20const%20accent%20=%20type%20===%20'success'%20?%20'%2322c55e'%20:%20type%20===%20'error'%20?%20'%23ef4444'%20:%20type%20===%20'warn'%20?%20'%23f59e0b'%20:%20'%2338bdf8';%20if%20(titleEl)%20%7B%20titleEl.style.color%20=%20accent;%20titleEl.innerHTML%20=%20icon%20+%20'%20'%20+%20title;%20%7D%20if%20(msgEl)%20%7B%20msgEl.innerHTML%20=%20message;%20%7D%20if%20(autoCloseMs%20%3E%200)%20%7B%20setTimeout(removeToast,%20autoCloseMs);%20%7D%20%7D%20function%20removeToast()%20%7B%20const%20toast%20=%20document.getElementById(TOAST_ID);%20if%20(toast%20&&%20toast.isConnected)%20%7B%20toast.style.opacity%20=%20'0';%20toast.style.transform%20=%20'translateY(-8px)';%20setTimeout(()%20=%3E%20toast.remove(),%20250);%20%7D%20%7D%20const%20sleep%20=%20(ms)%20=%3E%20new%20Promise(r%20=%3E%20setTimeout(r,%20ms));%20function%20normalize(str)%20%7B%20return%20(str%20%7C%7C%20'')%20.replace(/%5B%5Cu00A0%5Cu1680%5Cu2000-%5Cu200B%5Cu2028%5Cu2029%5Cu202F%5Cu205F%5Cu3000%5CuFEFF%5D/g,%20'%20')%20.replace(/%5Cs+/g,%20'%20')%20.trim()%20.toUpperCase();%20%7D%20function%20normalizeClean(str)%20%7B%20return%20normalize(str).replace(/%5B%5EA-Z0-9%5D/g,%20'');%20%7D%20function%20cleanEbayItemText(el)%20%7B%20if%20(!el)%20return%20'';%20try%20%7B%20const%20clone%20=%20el.cloneNode(true);%20clone.querySelectorAll('.clipped,%20svg,%20button').forEach(x%20=%3E%20x.remove());%20return%20(clone.textContent%20%7C%7C%20'').trim();%20%7D%20catch%20(e)%20%7B%20return%20(el.textContent%20%7C%7C%20'').trim();%20%7D%20%7D%20function%20createValueTracker()%20%7B%20const%20exactSet%20=%20new%20Set();%20const%20cleanSet%20=%20new%20Set();%20let%20containerCleanText%20=%20'';%20function%20add(str)%20%7B%20if%20(!str)%20return;%20const%20stripped%20=%20String(str).replace(/%5Cs*%5C(%5C+%5Cd+%5C)%5Cs*$/g,%20'').trim();%20const%20norm%20=%20normalize(stripped);%20if%20(!norm)%20return;%20exactSet.add(norm);%20const%20cl%20=%20normalizeClean(norm);%20if%20(cl)%20cleanSet.add(cl);%20if%20(/%5B%5C/;%7C%5D/.test(norm))%20%7B%20norm.split(/%5B%5C/;%7C%5D/).map(s%20=%3E%20s.trim()).filter(Boolean).forEach(part%20=%3E%20%7B%20exactSet.add(part);%20const%20cp%20=%20normalizeClean(part);%20if%20(cp)%20cleanSet.add(cp);%20%7D);%20%7D%20%7D%20function%20setContainerRawText(txt)%20%7B%20if%20(txt)%20%7B%20containerCleanText%20=%20normalizeClean(txt);%20%7D%20%7D%20function%20has(val)%20%7B%20if%20(!val)%20return%20false;%20const%20norm%20=%20normalize(val);%20if%20(!norm)%20return%20false;%20if%20(exactSet.has(norm))%20return%20true;%20const%20cl%20=%20normalizeClean(norm);%20if%20(cl%20&&%20cleanSet.has(cl))%20return%20true;%20if%20(/%5B%5C/;%7C%5D/.test(norm))%20%7B%20const%20parts%20=%20norm.split(/%5B%5C/;%7C%5D/).map(s%20=%3E%20s.trim()).filter(Boolean);%20for%20(const%20p%20of%20parts)%20%7B%20if%20(exactSet.has(p))%20return%20true;%20const%20cp%20=%20normalizeClean(p);%20if%20(cp%20&&%20cleanSet.has(cp))%20return%20true;%20if%20(cp%20&&%20cp.length%20%3E=%204%20&&%20containerCleanText.includes(cp))%20return%20true;%20%7D%20%7D%20if%20(cl%20&&%20cl.length%20%3E=%204%20&&%20containerCleanText.includes(cl))%20%7B%20return%20true;%20%7D%20for%20(const%20item%20of%20exactSet)%20%7B%20if%20(item.endsWith('...')%20&&%20norm.startsWith(item.slice(0,%20-3)))%20return%20true;%20if%20(norm.endsWith('...')%20&&%20item.startsWith(norm.slice(0,%20-3)))%20return%20true;%20%7D%20return%20false;%20%7D%20return%20%7B%20add,%20has,%20setContainerRawText,%20size:%20()%20=%3E%20exactSet.size,%20getAll:%20()%20=%3E%20Array.from(exactSet)%20%7D;%20%7D%20function%20checkEbayPage(payload)%20%7B%20const%20host%20=%20window.location.hostname.toLowerCase();%20const%20url%20=%20window.location.href.toLowerCase();%20if%20(!host.includes('ebay.'))%20%7B%20showToast('Wrong%20Website',%20'Please%20open%20your%20eBay%20listing%20page%20to%20run%20this%20tool.',%20'error',%205000);%20return%20false;%20%7D%20const%20matches%20=%20(payload%20&&%20Array.isArray(payload.pageMatch)%20&&%20payload.pageMatch.length%20%3E%200)%20?%20payload.pageMatch%20:%20%5B'lstng',%20'sl/',%20'itm',%20'draft',%20'sell'%5D;%20const%20isListing%20=%20matches.some(m%20=%3E%20url.includes(m.toLowerCase()));%20if%20(!isListing)%20%7B%20showToast('Not%20a%20Listing%20Page',%20'Please%20navigate%20to%20an%20active%20eBay%20listing%20draft/edit%20page.',%20'warn',%205000);%20return%20false;%20%7D%20return%20true;%20%7D%20function%20setNativeValue(el,%20value)%20%7B%20const%20lastValue%20=%20el.value;%20const%20proto%20=%20el.tagName%20===%20'TEXTAREA'%20?%20window.HTMLTextAreaElement.prototype%20:%20window.HTMLInputElement.prototype;%20const%20setter%20=%20Object.getOwnPropertyDescriptor(proto,%20'value')?.set;%20if%20(setter)%20%7B%20setter.call(el,%20value);%20%7D%20else%20%7B%20el.value%20=%20value;%20%7D%20if%20(el._valueTracker)%20%7B%20try%20%7B%20el._valueTracker.setValue(lastValue);%20%7D%20catch%20(e)%20%7B%7D%20%7D%20%7D%20function%20locateTitleField(titleConfig)%20%7B%20const%20customSelectors%20=%20(titleConfig%20&&%20titleConfig.selectors)%20%7C%7C%20%5B%20'input%5Bname=%22title%22%5D',%20'textarea%5Bname=%22title%22%5D',%20'input%5Bdata-testid=%22title%22%5D',%20'textarea%5Bdata-testid=%22title%22%5D',%20'input%5Baria-label*=%22Title%22%20i%5D',%20'textarea%5Baria-label*=%22Title%22%20i%5D',%20'input%5Bplaceholder*=%22Title%22%20i%5D',%20'textarea%5Bplaceholder*=%22Title%22%20i%5D',%20'div%5Bclass*=%22title%22%20i%5D%20input',%20'div%5Bclass*=%22title%22%20i%5D%20textarea'%20%5D;%20for%20(const%20sel%20of%20customSelectors)%20%7B%20try%20%7B%20const%20el%20=%20document.querySelector(sel);%20if%20(el%20&&%20el.isConnected)%20%7B%20return%20el;%20%7D%20%7D%20catch%20(e)%20%7B%7D%20%7D%20const%20labels%20=%20Array.from(document.querySelectorAll('label,%20%5Bclass*=%22label%22%5D,%20span,%20h3,%20h4'));%20for%20(const%20lbl%20of%20labels)%20%7B%20const%20txt%20=%20(lbl.innerText%20%7C%7C%20lbl.textContent%20%7C%7C%20'').trim().toLowerCase();%20if%20(txt%20===%20'title'%20%7C%7C%20txt%20===%20'listing%20title'%20%7C%7C%20(txt.includes('title')%20&&%20txt.length%20%3C%2018))%20%7B%20const%20container%20=%20lbl.closest('%5Bclass*=%22field%22%5D,%20%5Bclass*=%22row%22%5D,%20%5Bclass*=%22title%22%5D,%20div')%20%7C%7C%20lbl.parentElement;%20if%20(container)%20%7B%20const%20inp%20=%20container.querySelector('input%5Btype=%22text%22%5D,%20input:not(%5Btype%5D),%20textarea');%20if%20(inp%20&&%20inp.isConnected)%20return%20inp;%20%7D%20const%20forAttr%20=%20lbl.getAttribute('for');%20if%20(forAttr)%20%7B%20const%20el%20=%20document.getElementById(forAttr);%20if%20(el%20&&%20el.isConnected)%20return%20el;%20%7D%20%7D%20%7D%20return%20null;%20%7D%20async%20function%20updateEbayTitle(titleConfig,%20newTitle)%20%7B%20if%20(!newTitle%20%7C%7C%20!String(newTitle).trim())%20%7B%20return%20%7B%20success:%20true,%20skipped:%20true,%20reason:%20'Empty%20title'%20%7D;%20%7D%20const%20cleanTitle%20=%20String(newTitle).trim().slice(0,%2080);%20const%20titleEl%20=%20locateTitleField(titleConfig);%20if%20(!titleEl)%20%7B%20return%20%7B%20success:%20false,%20reason:%20'Title%20field%20not%20found'%20%7D;%20%7D%20const%20currentVal%20=%20(titleEl.value%20%7C%7C%20'').trim();%20if%20(currentVal%20===%20cleanTitle)%20%7B%20return%20%7B%20success:%20true,%20updated:%20false,%20alreadyUpToDate:%20true,%20value:%20cleanTitle%20%7D;%20%7D%20titleEl.focus();%20await%20sleep(60);%20setNativeValue(titleEl,%20cleanTitle);%20titleEl.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20titleEl.dispatchEvent(new%20Event('change',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20await%20sleep(150);%20if%20(typeof%20titleEl.blur%20===%20'function')%20%7B%20titleEl.blur();%20%7D%20await%20sleep(150);%20const%20verified%20=%20(titleEl.value%20%7C%7C%20'').trim();%20const%20success%20=%20verified%20===%20cleanTitle;%20return%20%7B%20success:%20success,%20updated:%20success,%20value:%20verified,%20reason:%20success%20?%20null%20:%20%60Value%20mismatch%20(got%20%22$%7Bverified.slice(0,%2020)%7D...%22)%60%20%7D;%20%7D%20function%20locateTargetField(targetConfig)%20%7B%20const%20aliases%20=%20(targetConfig%20&&%20targetConfig.aliases)%20%7C%7C%20%5B'Manufacturer%20Part%20Number',%20'MPN',%20'Part%20Number'%5D;%20const%20customSelectors%20=%20(targetConfig%20&&%20targetConfig.selectors)%20%7C%7C%20%5B%5D;%20function%20isMenuButton(btn)%20%7B%20if%20(!btn)%20return%20false;%20const%20controls%20=%20btn.getAttribute('aria-controls');%20const%20cls%20=%20btn.className%20%7C%7C%20'';%20return%20!!(controls%20%7C%7C%20cls.includes('fake-menu-button')%20%7C%7C%20cls.includes('se-expand-button'));%20%7D%20function%20resolveMenu(btn)%20%7B%20const%20controlsId%20=%20btn.getAttribute('aria-controls');%20if%20(controlsId)%20%7B%20const%20m%20=%20document.getElementById(controlsId);%20if%20(m)%20return%20m;%20%7D%20return%20btn.parentElement?.querySelector('.fake-menu-button__menu')%20%7C%7C%20btn.closest('.fake-menu-button')?.querySelector('.fake-menu-button__menu')%20%7C%7C%20btn.parentElement?.parentElement?.querySelector('.fake-menu-button__menu');%20%7D%20for%20(const%20a%20of%20aliases)%20%7B%20const%20btnByName%20=%20document.querySelector(%60button%5Bname=%22attributes.$%7Ba%7D%22%20i%5D%60)%20%7C%7C%20document.querySelector(%60button%5Bname*=%22$%7Ba%7D%22%20i%5D%60);%20if%20(btnByName%20&&%20btnByName.isConnected)%20%7B%20const%20row%20=%20btnByName.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields,%20.summary__attributes--field,%20tr,%20fieldset')%20%7C%7C%20btnByName.parentElement;%20return%20%7B%20type:%20'menu',%20button:%20btnByName,%20menu:%20resolveMenu(btnByName),%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20const%20labelCandidates%20=%20Array.from(document.querySelectorAll('label,%20button.fake-link,%20%5Bdata-aspect-name%5D,%20%5Bdata-name%5D,%20span.field__label,%20.summary__attributes--label'));%20for%20(const%20node%20of%20labelCandidates)%20%7B%20const%20text%20=%20(node.innerText%20%7C%7C%20node.textContent%20%7C%7C%20'').trim();%20const%20aspectAttr%20=%20(node.getAttribute('data-aspect-name')%20%7C%7C%20node.getAttribute('data-name')%20%7C%7C%20'').trim();%20for%20(const%20a%20of%20aliases)%20%7B%20const%20al%20=%20a.toLowerCase();%20const%20matchesAspect%20=%20aspectAttr.toLowerCase()%20===%20al%20%7C%7C%20aspectAttr.toLowerCase().includes(al);%20const%20matchesText%20=%20text.toLowerCase()%20===%20al%20%7C%7C%20(text.toLowerCase().includes(al)%20&&%20text.length%20%3C%20al.length%20+%2018);%20if%20(matchesAspect%20%7C%7C%20matchesText)%20%7B%20const%20row%20=%20node.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields,%20.summary__attributes--field,%20%5Bclass*=%22aspect%22%5D,%20%5Bclass*=%22specific%22%5D,%20tr,%20fieldset')%20%7C%7C%20node.parentElement?.parentElement;%20if%20(row)%20%7B%20const%20btn%20=%20row.querySelector('button.fake-menu-button__button,%20button.se-expand-button__button,%20button%5Baria-controls%5D,%20button%5Bname%5E=%22attributes.%22%5D');%20if%20(btn%20&&%20isMenuButton(btn))%20%7B%20return%20%7B%20type:%20'menu',%20button:%20btn,%20menu:%20resolveMenu(btn),%20container:%20row,%20label:%20a%20%7D;%20%7D%20const%20inp%20=%20row.querySelector('input%5Btype=%22text%22%5D,%20input:not(%5Btype%5D),%20%5Brole=%22combobox%22%5D');%20if%20(inp%20&&%20inp.isConnected)%20%7B%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20%7D%20%7D%20%7D%20for%20(const%20sel%20of%20customSelectors)%20%7B%20try%20%7B%20const%20el%20=%20document.querySelector(sel);%20if%20(el%20&&%20el.isConnected)%20%7B%20if%20(el.tagName%20===%20'BUTTON'%20&&%20isMenuButton(el))%20%7B%20const%20row%20=%20el.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20el.parentElement;%20return%20%7B%20type:%20'menu',%20button:%20el,%20menu:%20resolveMenu(el),%20container:%20row,%20label:%20'Custom%20Selector'%20%7D;%20%7D%20const%20inp%20=%20el.tagName%20===%20'INPUT'%20?%20el%20:%20el.querySelector('input');%20if%20(inp%20&&%20inp.isConnected)%20%7B%20const%20row%20=%20inp.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20inp.parentElement;%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20'Custom%20Selector'%20%7D;%20%7D%20%7D%20%7D%20catch%20(e)%20%7B%7D%20%7D%20const%20allInputs%20=%20Array.from(document.querySelectorAll('input%5Btype=%22text%22%5D,%20input:not(%5Btype%5D),%20%5Brole=%22combobox%22%5D'));%20for%20(const%20inp%20of%20allInputs)%20%7B%20const%20aria%20=%20(inp.getAttribute('aria-label')%20%7C%7C%20'').toLowerCase();%20const%20ph%20=%20(inp.placeholder%20%7C%7C%20'').toLowerCase();%20const%20name%20=%20(inp.name%20%7C%7C%20'').toLowerCase();%20for%20(const%20a%20of%20aliases)%20%7B%20const%20al%20=%20a.toLowerCase();%20if%20(aria.includes(al)%20%7C%7C%20ph.includes(al)%20%7C%7C%20name.includes(al))%20%7B%20const%20row%20=%20inp.closest('%5Bdata-testid=%22attribute%22%5D,%20.summary__attributes--fields')%20%7C%7C%20inp.parentElement;%20return%20%7B%20type:%20'input',%20input:%20inp,%20container:%20row,%20label:%20a%20%7D;%20%7D%20%7D%20%7D%20return%20null;%20%7D%20function%20extractExistingValues(target)%20%7B%20const%20tracker%20=%20createValueTracker();%20if%20(target.container)%20%7B%20tracker.setContainerRawText(target.container.innerText%20%7C%7C%20target.container.textContent%20%7C%7C%20'');%20%7D%20if%20(target.type%20===%20'menu'%20&&%20target.button)%20%7B%20const%20btnText%20=%20target.button.innerText%20%7C%7C%20target.button.textContent%20%7C%7C%20'';%20const%20cleanBtnText%20=%20btnText.replace(/%5Cs*%5C(%5C+%5Cd+%5C)%5Cs*$/g,%20'').trim();%20if%20(cleanBtnText%20&&%20!/%5E(select%7Center%20your%20own%7C-%20select%20-)$/i.test(cleanBtnText))%20%7B%20tracker.add(cleanBtnText);%20%7D%20const%20menu%20=%20target.menu%20%7C%7C%20(target.button.getAttribute('aria-controls')%20?%20document.getElementById(target.button.getAttribute('aria-controls'))%20:%20null);%20if%20(menu)%20%7B%20const%20selectedItems%20=%20Array.from(menu.querySelectorAll(%20'%5Bname%5E=%22selectedOptions-%22%5D%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D,%20.selectedOptions%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D,%20%5Brole=%22menuitemcheckbox%22%5D%5Baria-checked=%22true%22%5D'%20));%20selectedItems.forEach(item%20=%3E%20%7B%20const%20textEl%20=%20item.querySelector('.filter-menu__text')%20%7C%7C%20item;%20const%20txt%20=%20cleanEbayItemText(textEl);%20if%20(txt)%20tracker.add(txt);%20%7D);%20%7D%20%7D%20else%20if%20(target.type%20===%20'input'%20&&%20target.container)%20%7B%20const%20chipElements%20=%20Array.from(target.container.querySelectorAll(%20'.chip,%20%5Bclass*=%22chip%22%5D,%20.pill,%20%5Bclass*=%22pill%22%5D,%20.token,%20%5Bclass*=%22token%22%5D,%20.tag,%20%5Bclass*=%22tag%22%5D,%20%5Bclass*=%22chips-combobox__item%22%5D,%20li%5Brole=%22listitem%22%5D'%20));%20chipElements.forEach(el%20=%3E%20%7B%20if%20(el%20===%20target.input%20%7C%7C%20(el.contains%20&&%20el.contains(target.input)))%20return;%20const%20txt%20=%20cleanEbayItemText(el);%20if%20(txt)%20tracker.add(txt);%20%7D);%20const%20removeButtons%20=%20Array.from(target.container.querySelectorAll(%20'button%5Baria-label*=%22remove%22%20i%5D,%20button%5Baria-label*=%22delete%22%20i%5D,%20%5Baria-label*=%22remove%22%20i%5D'%20));%20removeButtons.forEach(btn%20=%3E%20%7B%20const%20aria%20=%20btn.getAttribute('aria-label')%20%7C%7C%20'';%20const%20m%20=%20aria.match(/(?:remove%7Cdelete%7Cclose%7Cclear)%5Cs+(.+)/i);%20if%20(m%20&&%20m%5B1%5D)%20tracker.add(m%5B1%5D);%20%7D);%20if%20(target.input%20&&%20target.input.value)%20%7B%20tracker.add(target.input.value);%20%7D%20%7D%20return%20tracker;%20%7D%20async%20function%20addViaEbayMenu(target,%20toAdd)%20%7B%20const%20btn%20=%20target.button;%20let%20menu%20=%20target.menu%20%7C%7C%20(btn.getAttribute('aria-controls')%20?%20document.getElementById(btn.getAttribute('aria-controls'))%20:%20null);%20if%20(btn.getAttribute('aria-expanded')%20!==%20'true')%20%7B%20btn.click();%20await%20sleep(350);%20menu%20=%20menu%20%7C%7C%20(btn.getAttribute('aria-controls')%20?%20document.getElementById(btn.getAttribute('aria-controls'))%20:%20null);%20%7D%20if%20(!menu)%20%7B%20throw%20new%20Error('eBay%20menu%20container%20could%20not%20be%20opened.');%20%7D%20const%20searchInput%20=%20menu.querySelector(%20'input%5Bname*=%22search-box-%22%5D,%20input%5Bplaceholder*=%22Enter%20your%20own%22%20i%5D,%20input%5Baria-label*=%22Enter%20your%20own%22%20i%5D,%20.se-search-box%20input,%20input%5Btype=%22text%22%5D'%20);%20if%20(!searchInput)%20%7B%20throw%20new%20Error('Could%20not%20find%20search%20input%20inside%20eBay%20dropdown.');%20%7D%20let%20addedCount%20=%200;%20for%20(let%20i%20=%200;%20i%20%3C%20toAdd.length;%20i++)%20%7B%20const%20val%20=%20toAdd%5Bi%5D;%20showToast('Adding%20Part%20Numbers',%20%60%5B$%7Bi%20+%201%7D/$%7BtoAdd.length%7D%5D%20Typing:%20%22$%7Bval.slice(0,%2022)%7D$%7Bval.length%20%3E%2022%20?%20'...'%20:%20''%7D%22%60);%20searchInput.focus();%20setNativeValue(searchInput,%20'');%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(100);%20setNativeValue(searchInput,%20val);%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(400);%20let%20customOption%20=%20menu.querySelector(%20'%5Bname%5E=%22customOptions-%22%5D%20%5Brole=%22menuitemcheckbox%22%5D,%20.customOptions%20%5Brole=%22menuitemcheckbox%22%5D'%20);%20if%20(!customOption)%20%7B%20const%20allItems%20=%20Array.from(menu.querySelectorAll('%5Brole=%22menuitemcheckbox%22%5D'));%20customOption%20=%20allItems.find(it%20=%3E%20%7B%20const%20txt%20=%20cleanEbayItemText(it);%20return%20normalizeClean(txt)%20===%20normalizeClean(val);%20%7D);%20%7D%20if%20(customOption)%20%7B%20customOption.click();%20addedCount++;%20await%20sleep(350);%20%7D%20else%20%7B%20const%20ev%20=%20new%20KeyboardEvent('keydown',%20%7B%20key:%20'Enter',%20code:%20'Enter',%20keyCode:%2013,%20which:%2013,%20bubbles:%20true%20%7D);%20searchInput.dispatchEvent(ev);%20await%20sleep(300);%20%7D%20setNativeValue(searchInput,%20'');%20searchInput.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true%20%7D));%20await%20sleep(150);%20%7D%20if%20(btn.getAttribute('aria-expanded')%20===%20'true')%20%7B%20btn.click();%20await%20sleep(250);%20%7D%20return%20addedCount;%20%7D%20async%20function%20addViaStandardInput(target,%20toAdd)%20%7B%20const%20input%20=%20target.input;%20let%20addedCount%20=%200;%20for%20(let%20i%20=%200;%20i%20%3C%20toAdd.length;%20i++)%20%7B%20const%20val%20=%20toAdd%5Bi%5D;%20showToast('Adding%20Part%20Numbers',%20%60%5B$%7Bi%20+%201%7D/$%7BtoAdd.length%7D%5D%20Entering:%20%22$%7Bval.slice(0,%2022)%7D...%22%60);%20input.focus();%20await%20sleep(60);%20setNativeValue(input,%20val);%20input.dispatchEvent(new%20Event('input',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20input.dispatchEvent(new%20Event('change',%20%7B%20bubbles:%20true,%20cancelable:%20true%20%7D));%20await%20sleep(120);%20const%20options%20=%20Array.from(document.querySelectorAll('%5Brole=%22option%22%5D,%20.combobox__option,%20li%5Brole=%22option%22%5D'));%20const%20matched%20=%20options.find(opt%20=%3E%20%7B%20const%20t%20=%20(opt.innerText%20%7C%7C%20opt.textContent%20%7C%7C%20'').trim().toLowerCase();%20return%20t%20===%20val.toLowerCase();%20%7D);%20if%20(matched%20&&%20typeof%20matched.click%20===%20'function')%20%7B%20matched.click();%20addedCount++;%20await%20sleep(150);%20%7D%20else%20%7B%20%5B'keydown',%20'keypress',%20'keyup'%5D.forEach(type%20=%3E%20%7B%20const%20ev%20=%20new%20KeyboardEvent(type,%20%7B%20key:%20'Enter',%20code:%20'Enter',%20keyCode:%2013,%20which:%2013,%20bubbles:%20true,%20cancelable:%20true%20%7D);%20input.dispatchEvent(ev);%20%7D);%20addedCount++;%20await%20sleep(150);%20%7D%20if%20(typeof%20input.blur%20===%20'function')%20input.blur();%20await%20sleep(120);%20%7D%20return%20addedCount;%20%7D%20async%20function%20updateEbayMpn(mpnConfig,%20rows)%20%7B%20const%20target%20=%20locateTargetField(mpnConfig);%20if%20(!target)%20%7B%20return%20%7B%20success:%20false,%20reason:%20'MPN%20field%20not%20found'%20%7D;%20%7D%20const%20existingBefore%20=%20extractExistingValues(target);%20const%20toAdd%20=%20%5B%5D;%20const%20alreadyPresent%20=%20%5B%5D;%20for%20(const%20val%20of%20rows)%20%7B%20if%20(existingBefore.has(val))%20%7B%20alreadyPresent.push(val);%20%7D%20else%20%7B%20toAdd.push(val);%20existingBefore.add(val);%20%7D%20%7D%20if%20(toAdd.length%20===%200)%20%7B%20return%20%7B%20success:%20true,%20alreadyUpToDate:%20true,%20added:%200,%20duplicatesSkipped:%20alreadyPresent.length%20%7D;%20%7D%20let%20committedCount%20=%200;%20try%20%7B%20if%20(target.type%20===%20'menu')%20%7B%20committedCount%20=%20await%20addViaEbayMenu(target,%20toAdd);%20%7D%20else%20%7B%20committedCount%20=%20await%20addViaStandardInput(target,%20toAdd);%20%7D%20%7D%20catch%20(err)%20%7B%20return%20%7B%20success:%20false,%20reason:%20err.message%20%7C%7C%20String(err)%20%7D;%20%7D%20await%20sleep(300);%20const%20existingAfter%20=%20extractExistingValues(target);%20let%20verifiedAdded%20=%200;%20let%20failedToCommit%20=%200;%20for%20(const%20val%20of%20toAdd)%20%7B%20if%20(existingAfter.has(val))%20%7B%20verifiedAdded++;%20%7D%20else%20%7B%20failedToCommit++;%20%7D%20%7D%20return%20%7B%20success:%20true,%20alreadyUpToDate:%20false,%20added:%20verifiedAdded,%20failed:%20failedToCommit,%20duplicatesSkipped:%20alreadyPresent.length%20%7D;%20%7D%20async%20function%20run()%20%7B%20showToast('eBay%20Assistant',%20'Reading%20clipboard%20content...');%20let%20text%20=%20'';%20try%20%7B%20text%20=%20await%20navigator.clipboard.readText();%20%7D%20catch%20(e)%20%7B%20showToast('Clipboard%20Access%20Denied',%20'Please%20click%20the%20bookmarklet%20again%20to%20allow%20clipboard%20access.',%20'error',%205000);%20return;%20%7D%20if%20(!text%20%7C%7C%20!text.trim())%20%7B%20showToast('Clipboard%20Empty',%20'Click%20a%20%22Copy%20for%20eBay%22%20button%20in%20the%20tool%20first,%20then%20click%20this%20bookmark.',%20'warn',%204500);%20return;%20%7D%20let%20payload;%20try%20%7B%20payload%20=%20JSON.parse(text);%20%7D%20catch%20(e)%20%7B%20payload%20=%20%7B%20action:%20'UPDATE_MPN',%20rows:%20text.split(/%5Cr?%5Cn/).map(s%20=%3E%20s.trim()).filter(Boolean)%20%7D;%20%7D%20if%20(!checkEbayPage(payload))%20return;%20const%20hasTitle%20=%20(payload.title%20&&%20(typeof%20payload.title%20===%20'string'%20%7C%7C%20payload.title.value))%20%7C%7C%20(payload.action%20===%20'UPDATE_TITLE'%20&&%20payload.value);%20const%20titleVal%20=%20(payload.title%20&&%20typeof%20payload.title%20===%20'string')%20?%20payload.title%20:%20(payload.title%20&&%20payload.title.value)%20%7C%7C%20(payload.action%20===%20'UPDATE_TITLE'%20?%20payload.value%20:%20'');%20const%20titleConfig%20=%20(payload.title%20&&%20payload.title.target)%20%7C%7C%20payload.target%20%7C%7C%20%7B%7D;%20const%20mpnRows%20=%20Array.isArray(payload.rows)%20?%20payload.rows%20:%20(payload.mpn%20&&%20Array.isArray(payload.mpn.rows))%20?%20payload.mpn.rows%20:%20%5B%5D;%20const%20mpnConfig%20=%20(payload.mpn%20&&%20payload.mpn.target)%20%7C%7C%20payload.target%20%7C%7C%20%7B%7D;%20if%20(!hasTitle%20&&%20mpnRows.length%20===%200)%20%7B%20showToast('No%20Data',%20'Copied%20content%20contains%20neither%20title%20nor%20part%20numbers%20to%20update.',%20'warn',%204000);%20return;%20%7D%20let%20titleResult%20=%20null;%20let%20mpnResult%20=%20null;%20if%20(hasTitle%20&&%20titleVal)%20%7B%20showToast('eBay%20Assistant',%20'Checking%20listing%20Title...');%20titleResult%20=%20await%20updateEbayTitle(titleConfig,%20titleVal);%20%7D%20if%20(mpnRows.length%20%3E%200)%20%7B%20showToast('eBay%20Assistant',%20'Checking%20Manufacturer%20Part%20Numbers...');%20mpnResult%20=%20await%20updateEbayMpn(mpnConfig,%20mpnRows);%20%7D%20const%20summary%20=%20%5B%5D;%20let%20hasError%20=%20false;%20if%20(titleResult)%20%7B%20if%20(titleResult.success)%20%7B%20if%20(titleResult.alreadyUpToDate)%20%7B%20summary.push('Title:%20Already%20up%20to%20date');%20%7D%20else%20%7B%20summary.push('Title:%20Updated');%20%7D%20%7D%20else%20%7B%20summary.push(%60Title:%20Failed%20($%7BtitleResult.reason%7D)%60);%20hasError%20=%20true;%20%7D%20%7D%20if%20(mpnResult)%20%7B%20if%20(mpnResult.success)%20%7B%20if%20(mpnResult.alreadyUpToDate)%20%7B%20summary.push(%60MPN:%20All%20$%7BmpnResult.duplicatesSkipped%7D%20already%20present%60);%20%7D%20else%20%7B%20const%20skip%20=%20mpnResult.duplicatesSkipped%20%3E%200%20?%20%60%20($%7BmpnResult.duplicatesSkipped%7D%20skipped)%60%20:%20'';%20summary.push(%60MPN:%20Added%20$%7BmpnResult.added%7D$%7Bskip%7D%60);%20%7D%20%7D%20else%20%7B%20summary.push(%60MPN:%20Failed%20($%7BmpnResult.reason%7D)%60);%20hasError%20=%20true;%20%7D%20%7D%20const%20allUpToDate%20=%20(titleResult%20?%20titleResult.alreadyUpToDate%20:%20true)%20&&%20(mpnResult%20?%20mpnResult.alreadyUpToDate%20:%20true);%20if%20(allUpToDate)%20%7B%20showToast('Already%20Up%20to%20Date',%20summary.join('%3Cbr%3E'),%20'info',%204500);%20%7D%20else%20if%20(!hasError)%20%7B%20showToast('Success',%20summary.join('%3Cbr%3E'),%20'success',%205000);%20%7D%20else%20%7B%20showToast('Notice',%20summary.join('%3Cbr%3E'),%20'warn',%206000);%20%7D%20%7D%20run().catch(err%20=%3E%20%7B%20showToast('Error',%20(err%20&&%20err.message)%20?%20err.message%20:%20String(err),%20'error',%206000);%20%7D);%20%7D)();";
 
 // Developer-configured target settings (updated from backend/source, zero user configuration required)
 const DEFAULT_PAYLOAD_CONFIG = {
+  title: {
+    fieldName: "Title",
+    selectors: [
+      'input[name="title"]',
+      'textarea[name="title"]',
+      'input[data-testid="title"]',
+      'textarea[data-testid="title"]',
+      'input[aria-label*="Title" i]',
+      'textarea[aria-label*="Title" i]',
+      'input[placeholder*="Title" i]',
+      'textarea[placeholder*="Title" i]'
+    ]
+  },
   mpn: {
     fieldName: "Manufacturer Part Number",
     aliases: ["Manufacturer Part Number", "MPN", "Part Number"],
@@ -1001,7 +1330,7 @@ function initBookmarkletModal() {
 
   if (bmLink) {
     bmLink.href = EBAY_BOOKMARKLET_CODE;
-    bmLink.setAttribute('title', 'Fill eBay Listing v1.1.0 - Drag to Bookmarks bar');
+    bmLink.setAttribute('title', 'Fill eBay Listing v1.2.0 - Drag to Bookmarks bar');
   }
 
   // Device detection: check for mobile user agents or small touch devices
@@ -1082,6 +1411,16 @@ function initBookmarkletModal() {
   const copyEbayBtn = document.getElementById("btn-copy-ebay-payload");
   if (copyEbayBtn) {
     copyEbayBtn.addEventListener("click", copyEbayBookmarkletPayload);
+  }
+
+  const copyTitleBtn = document.getElementById("btn-copy-ebay-title");
+  if (copyTitleBtn) {
+    copyTitleBtn.addEventListener("click", copyEbayTitlePayload);
+  }
+
+  const copyMasterBtn = document.getElementById("btn-master-copy-ebay");
+  if (copyMasterBtn) {
+    copyMasterBtn.addEventListener("click", copyMasterEbayPayload);
   }
 }
 
