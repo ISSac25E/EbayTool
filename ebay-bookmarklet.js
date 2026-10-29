@@ -20,10 +20,18 @@
   const ENGINE_VERSION = '1.2.0';
   const REQUIRED_PROTOCOL = 'EBAY_TOOL_PAYLOAD';
   const REQUIRED_VERSION = '1.2';
+  const SUPPORTED_VERSIONS = ['1.0', '1.1', '1.2'];
   const TOAST_ID = '__ebay_assistant_toast__';
 
   // 1. Minimal Notification Toast
+  let toastTimer = null;
+
   function showToast(title, message, type = 'info', autoCloseMs = 0) {
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
+
     let toast = document.getElementById(TOAST_ID);
     if (!toast) {
       toast = document.createElement('div');
@@ -32,12 +40,13 @@
         'position: fixed',
         'top: 16px',
         'right: 16px',
-        'width: 350px',
+        'width: 360px',
         'max-width: calc(100vw - 32px)',
         'background: #111827',
         'color: #ffffff',
         'border-radius: 8px',
-        'box-shadow: 0 10px 25px rgba(0,0,0,0.35)',
+        'border: 1px solid rgba(255, 255, 255, 0.14)',
+        'box-shadow: 0 12px 30px rgba(0,0,0,0.45)',
         'z-index: 2147483647',
         'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         'font-size: 13px',
@@ -46,7 +55,7 @@
         'box-sizing: border-box',
         'display: flex',
         'flex-direction: column',
-        'gap: 4px',
+        'gap: 6px',
         'transition: opacity 0.25s ease, transform 0.25s ease'
       ].join(';');
 
@@ -58,7 +67,10 @@
       
       const closeBtn = document.createElement('button');
       closeBtn.innerText = '✕';
-      closeBtn.style.cssText = 'background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1;';
+      closeBtn.setAttribute('title', 'Dismiss notification');
+      closeBtn.style.cssText = 'background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0 4px; font-size: 15px; line-height: 1; border-radius: 4px; transition: color 0.15s;';
+      closeBtn.onmouseenter = () => closeBtn.style.color = '#ffffff';
+      closeBtn.onmouseleave = () => closeBtn.style.color = '#9ca3af';
       closeBtn.onclick = () => removeToast();
 
       topRow.appendChild(titleSpan);
@@ -71,7 +83,23 @@
       toast.appendChild(topRow);
       toast.appendChild(msgDiv);
       document.body.appendChild(toast);
+
+      // Hover-to-freeze: pause timer while mouse is inside toast
+      toast.addEventListener('mouseenter', () => {
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+      });
+      toast.addEventListener('mouseleave', () => {
+        if (toast._autoCloseMs > 0) {
+          toastTimer = setTimeout(removeToast, Math.max(toast._autoCloseMs, 10000));
+        }
+      });
     }
+
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
 
     const titleEl = document.getElementById(TOAST_ID + '_title');
     const msgEl = document.getElementById(TOAST_ID + '_msg');
@@ -87,12 +115,23 @@
       msgEl.innerHTML = message;
     }
 
+    // Attach click handler to any dismiss button inside message
+    const dismissBtn = toast.querySelector('[data-action="dismiss"]');
+    if (dismissBtn) {
+      dismissBtn.onclick = () => removeToast();
+    }
+
+    toast._autoCloseMs = autoCloseMs;
     if (autoCloseMs > 0) {
-      setTimeout(removeToast, autoCloseMs);
+      toastTimer = setTimeout(removeToast, autoCloseMs);
     }
   }
 
   function removeToast() {
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
     const toast = document.getElementById(TOAST_ID);
     if (toast && toast.isConnected) {
       toast.style.opacity = '0';
@@ -665,12 +704,12 @@
     try {
       text = await navigator.clipboard.readText();
     } catch (e) {
-      showToast('Clipboard Access Denied', 'Please click the bookmarklet again to allow clipboard access.', 'error', 5000);
+      showToast('Clipboard Access Denied', 'Please click the bookmarklet again to allow clipboard access.', 'error', 12000);
       return;
     }
 
     if (!text || !text.trim()) {
-      showToast('Clipboard Empty', 'Click a "Copy for eBay" button in the tool first, then click this bookmark.', 'warn', 4500);
+      showToast('Clipboard Empty', 'Click a "Copy for eBay" button in the tool first, then click this bookmark.', 'warn', 12000);
       return;
     }
 
@@ -686,140 +725,164 @@
         'Invalid Data',
         'Clipboard does not contain valid eBay Assistant data. Click <b>Copy for eBay</b> or <b>Master Copy</b> in the tool first.',
         'error',
-        6000
+        15000
       );
       return;
     }
 
     const payloadVersion = String(payload.version || 'unknown');
-    if (payloadVersion !== REQUIRED_VERSION) {
+    if (!SUPPORTED_VERSIONS.includes(payloadVersion)) {
       showToast(
         'Version Mismatch',
-        `Copied data is <b>v${payloadVersion}</b>, but Bookmarklet is <b>v${ENGINE_VERSION}</b>.<br>Please drag the new bookmarklet from the tool bar.`,
+        `Copied data is <b>v${payloadVersion}</b>, but Bookmarklet supports <b>v1.0 - v1.2</b>.<br>Please drag the new bookmarklet from the tool bar.`,
         'error',
-        7000
+        18000
       );
       return;
     }
 
     if (!checkEbayPage(payload)) return;
 
-    // Resolve Title payload components
-    const hasTitle = (payload.title && (typeof payload.title === 'string' || payload.title.value)) ||
-                     (payload.action === 'UPDATE_TITLE' && payload.value);
-    const titleVal = (payload.title && typeof payload.title === 'string')
-      ? payload.title
-      : (payload.title && payload.title.value) || (payload.action === 'UPDATE_TITLE' ? payload.value : '');
-    const titleConfig = (payload.title && payload.title.target) || payload.target || {};
+    const isMaster = payload.action === 'MASTER_UPDATE';
+    const isTitleOnly = payload.action === 'UPDATE_TITLE';
+    const isMpnOnly = payload.action === 'UPDATE_MPN';
 
-    // Resolve MPN payload components
-    const mpnRows = (Array.isArray(payload.rows) && payload.action !== 'UPDATE_YEAR')
-      ? payload.rows
-      : (payload.mpn && Array.isArray(payload.mpn.rows))
-        ? payload.mpn.rows
-        : [];
-    const mpnConfig = (payload.mpn && payload.mpn.target) || (payload.action === 'UPDATE_MPN' ? payload.target : null) || {};
+    // Title resolution
+    const hasTitle = isTitleOnly
+      ? Boolean(payload.value)
+      : (isMaster && payload.title && Boolean(payload.title.value || (typeof payload.title === 'string' && payload.title)));
+    const titleVal = isTitleOnly
+      ? (payload.value || '')
+      : (payload.title ? (payload.title.value || (typeof payload.title === 'string' ? payload.title : '')) : '');
+    const titleConfig = (payload.title && payload.title.target) || (isTitleOnly ? payload.target : null) || {};
 
-    // Resolve Year payload components
-    const hasYear = (payload.year && (payload.year.value || Array.isArray(payload.year.rows))) ||
-                    (payload.action === 'UPDATE_YEAR' && (payload.value || Array.isArray(payload.rows)));
-    const yearVal = (payload.year && payload.year.value) ||
-                    (payload.action === 'UPDATE_YEAR' ? payload.value : '');
-    const yearRows = (payload.year && Array.isArray(payload.year.rows))
-      ? payload.year.rows
-      : (payload.action === 'UPDATE_YEAR' && Array.isArray(payload.rows))
-        ? payload.rows
-        : (yearVal ? [yearVal] : []);
-    const yearConfig = (payload.year && payload.year.target) || (payload.action === 'UPDATE_YEAR' ? payload.target : null) || {
-      aliases: ['Year', 'Model Year', 'Compatible Year', 'Years']
-    };
+    // MPN resolution
+    const hasMpn = isMpnOnly
+      ? (Array.isArray(payload.rows) && payload.rows.length > 0)
+      : (isMaster && payload.mpn && Array.isArray(payload.mpn.rows) && payload.mpn.rows.length > 0);
+    const mpnRows = isMpnOnly
+      ? (payload.rows || [])
+      : (payload.mpn && Array.isArray(payload.mpn.rows) ? payload.mpn.rows : []);
+    const mpnConfig = (payload.mpn && payload.mpn.target) || (isMpnOnly ? payload.target : null) || {};
 
-    if (!hasTitle && mpnRows.length === 0 && !hasYear) {
-      showToast('No Data', 'Copied content contains no title, part numbers, or year to update.', 'warn', 4000);
+    if (!hasTitle && !hasMpn) {
+      showToast('No Data', 'Copied content contains neither title nor part numbers to update.', 'warn', 12000);
       return;
     }
 
     let titleResult = null;
     let mpnResult = null;
-    let yearResult = null;
+
+    // Announce staged payload components
+    const stagedOverview = [];
+    if (hasTitle && titleVal) stagedOverview.push(`Title ("${truncate(titleVal, 24)}")`);
+    if (hasMpn && mpnRows.length > 0) stagedOverview.push(`${mpnRows.length} MPN${mpnRows.length > 1 ? 's' : ''}`);
+    showToast('eBay Assistant', `Applying staged data: <b>${stagedOverview.join(' + ')}</b>...`);
+    await sleep(250);
 
     // Step 1: Update Title if present
     if (hasTitle && titleVal) {
-      showToast('eBay Assistant', 'Checking listing Title...');
+      showToast('eBay Assistant', 'Writing listing Title...');
       titleResult = await updateEbayTitle(titleConfig, titleVal);
     }
 
     // Step 2: Update MPN if present
-    if (mpnRows.length > 0) {
+    if (hasMpn && mpnRows.length > 0) {
       showToast('eBay Assistant', 'Checking Manufacturer Part Numbers...');
       mpnResult = await updateEbayMpn(mpnConfig, mpnRows);
     }
 
-    // Step 3: Update Year if present
-    if (hasYear && (yearVal || yearRows.length > 0)) {
-      showToast('eBay Assistant', 'Checking Year...');
-      yearResult = await updateEbayYear(yearConfig, yearVal, yearRows);
+    // Step 3: Multi-row Structured Reporting Toast
+    function truncate(str, max = 34) {
+      if (!str) return '';
+      return str.length > max ? str.slice(0, max - 1) + '…' : str;
     }
 
-    // Step 4: Reporting & Feedback Toast
-    const summary = [];
-    let hasError = false;
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderRow(icon, label, statusText, statusColor, extraText) {
+      const extraHtml = extraText
+        ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px;word-break:break-word;">${extraText}</div>`
+        : '';
+      return `
+        <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:14px;line-height:1.2;flex-shrink:0;">${icon}</span>
+          <div style="flex:1;min-width:0;line-height:1.35;">
+            <span style="font-weight:600;color:#f9fafb;">${label}:</span>
+            <span style="color:${statusColor};margin-left:4px;font-weight:500;">${statusText}</span>
+            ${extraHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    const rowsHtml = [];
+    let hasChanges = false;
+    let hasRealError = false;
+    let allUpToDate = true;
 
     if (titleResult) {
       if (titleResult.success) {
         if (titleResult.alreadyUpToDate) {
-          summary.push('Title: Already up to date');
+          rowsHtml.push(renderRow('⚡', 'Title', 'Already up to date', '#38bdf8', `"${escapeHtml(truncate(titleVal, 38))}"`));
         } else {
-          summary.push('Title: Updated');
+          rowsHtml.push(renderRow('✅', 'Title', 'Updated', '#22c55e', `"${escapeHtml(truncate(titleVal, 38))}"`));
+          hasChanges = true;
+          allUpToDate = false;
         }
       } else {
-        summary.push(`Title: Failed (${titleResult.reason})`);
-        hasError = true;
+        rowsHtml.push(renderRow('❌', 'Title', 'Failed', '#ef4444', escapeHtml(titleResult.reason || 'Field not found')));
+        hasRealError = true;
+        allUpToDate = false;
       }
     }
 
     if (mpnResult) {
       if (mpnResult.success) {
+        const mpnPreview = mpnRows.slice(0, 3).join(', ') + (mpnRows.length > 3 ? ' (+ ' + (mpnRows.length - 3) + ' more)' : '');
         if (mpnResult.alreadyUpToDate) {
-          summary.push(`MPN: All ${mpnResult.duplicatesSkipped} already present`);
+          const count = mpnResult.duplicatesSkipped || mpnRows.length;
+          rowsHtml.push(renderRow('⚡', 'MPN', 'All part numbers already present', '#38bdf8', `${count} verified on listing: [${escapeHtml(mpnPreview)}]`));
         } else {
-          const skip = mpnResult.duplicatesSkipped > 0 ? ` (${mpnResult.duplicatesSkipped} skipped)` : '';
-          summary.push(`MPN: Added ${mpnResult.added}${skip}`);
+          const skipTxt = mpnResult.duplicatesSkipped > 0 ? ` (${mpnResult.duplicatesSkipped} duplicate(s) existed)` : '';
+          const addedCount = mpnResult.added;
+          rowsHtml.push(renderRow('✅', 'MPN', `Added ${addedCount} part number${addedCount > 1 ? 's' : ''}${skipTxt}`, '#22c55e', `Staged: [${escapeHtml(mpnPreview)}]`));
+          hasChanges = true;
+          allUpToDate = false;
         }
       } else {
-        summary.push(`MPN: Failed (${mpnResult.reason})`);
-        hasError = true;
+        rowsHtml.push(renderRow('❌', 'MPN', 'Failed', '#ef4444', escapeHtml(mpnResult.reason || 'Field not found')));
+        hasRealError = true;
+        allUpToDate = false;
       }
     }
 
-    if (yearResult) {
-      if (yearResult.success) {
-        if (yearResult.alreadyUpToDate) {
-          summary.push('Year: Already up to date');
-        } else {
-          const countInfo = yearResult.added ? ` (${yearResult.added} added)` : '';
-          summary.push(`Year: Updated${countInfo}`);
-        }
-      } else {
-        summary.push(`Year: Failed (${yearResult.reason})`);
-        hasError = true;
-      }
-    }
+    const summaryContent = `
+      <div style="display:flex;flex-direction:column;gap:2px;margin-top:4px;">${rowsHtml.join('')}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.08);">
+        <button data-action="dismiss" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#d1d5db;font-size:11px;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:500;">Dismiss</button>
+      </div>`;
 
-    const allUpToDate = (titleResult ? titleResult.alreadyUpToDate : true) &&
-                        (mpnResult ? mpnResult.alreadyUpToDate : true) &&
-                        (yearResult ? yearResult.alreadyUpToDate : true);
-
-    if (allUpToDate) {
-      showToast('Already Up to Date', summary.join('<br>'), 'info', 4500);
-    } else if (!hasError) {
-      showToast('Success', summary.join('<br>'), 'success', 5000);
+    if (hasRealError && hasChanges) {
+      showToast('Partial Success', summaryContent, 'warn', 30000);
+    } else if (hasRealError && !hasChanges) {
+      showToast('Update Failed', summaryContent, 'error', 30000);
+    } else if (allUpToDate) {
+      showToast('Listing Up to Date', summaryContent, 'info', 25000);
     } else {
-      showToast('Notice', summary.join('<br>'), 'warn', 6000);
+      showToast('Update Complete', summaryContent, 'success', 30000);
     }
   }
 
+
   run().catch(err => {
-    showToast('Error', (err && err.message) ? err.message : String(err), 'error', 6000);
+    showToast('Error', (err && err.message) ? err.message : String(err), 'error', 25000);
   });
 })();
