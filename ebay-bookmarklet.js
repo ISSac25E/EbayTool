@@ -713,20 +713,35 @@
     const titleConfig = (payload.title && payload.title.target) || payload.target || {};
 
     // Resolve MPN payload components
-    const mpnRows = Array.isArray(payload.rows)
+    const mpnRows = (Array.isArray(payload.rows) && payload.action !== 'UPDATE_YEAR')
       ? payload.rows
       : (payload.mpn && Array.isArray(payload.mpn.rows))
         ? payload.mpn.rows
         : [];
-    const mpnConfig = (payload.mpn && payload.mpn.target) || payload.target || {};
+    const mpnConfig = (payload.mpn && payload.mpn.target) || (payload.action === 'UPDATE_MPN' ? payload.target : null) || {};
 
-    if (!hasTitle && mpnRows.length === 0) {
-      showToast('No Data', 'Copied content contains neither title nor part numbers to update.', 'warn', 4000);
+    // Resolve Year payload components
+    const hasYear = (payload.year && (payload.year.value || Array.isArray(payload.year.rows))) ||
+                    (payload.action === 'UPDATE_YEAR' && (payload.value || Array.isArray(payload.rows)));
+    const yearVal = (payload.year && payload.year.value) ||
+                    (payload.action === 'UPDATE_YEAR' ? payload.value : '');
+    const yearRows = (payload.year && Array.isArray(payload.year.rows))
+      ? payload.year.rows
+      : (payload.action === 'UPDATE_YEAR' && Array.isArray(payload.rows))
+        ? payload.rows
+        : (yearVal ? [yearVal] : []);
+    const yearConfig = (payload.year && payload.year.target) || (payload.action === 'UPDATE_YEAR' ? payload.target : null) || {
+      aliases: ['Year', 'Model Year', 'Compatible Year', 'Years']
+    };
+
+    if (!hasTitle && mpnRows.length === 0 && !hasYear) {
+      showToast('No Data', 'Copied content contains no title, part numbers, or year to update.', 'warn', 4000);
       return;
     }
 
     let titleResult = null;
     let mpnResult = null;
+    let yearResult = null;
 
     // Step 1: Update Title if present
     if (hasTitle && titleVal) {
@@ -740,7 +755,13 @@
       mpnResult = await updateEbayMpn(mpnConfig, mpnRows);
     }
 
-    // Step 3: Reporting & Feedback Toast
+    // Step 3: Update Year if present
+    if (hasYear && (yearVal || yearRows.length > 0)) {
+      showToast('eBay Assistant', 'Checking Year...');
+      yearResult = await updateEbayYear(yearConfig, yearVal, yearRows);
+    }
+
+    // Step 4: Reporting & Feedback Toast
     const summary = [];
     let hasError = false;
 
@@ -771,8 +792,23 @@
       }
     }
 
+    if (yearResult) {
+      if (yearResult.success) {
+        if (yearResult.alreadyUpToDate) {
+          summary.push('Year: Already up to date');
+        } else {
+          const countInfo = yearResult.added ? ` (${yearResult.added} added)` : '';
+          summary.push(`Year: Updated${countInfo}`);
+        }
+      } else {
+        summary.push(`Year: Failed (${yearResult.reason})`);
+        hasError = true;
+      }
+    }
+
     const allUpToDate = (titleResult ? titleResult.alreadyUpToDate : true) &&
-                        (mpnResult ? mpnResult.alreadyUpToDate : true);
+                        (mpnResult ? mpnResult.alreadyUpToDate : true) &&
+                        (yearResult ? yearResult.alreadyUpToDate : true);
 
     if (allUpToDate) {
       showToast('Already Up to Date', summary.join('<br>'), 'info', 4500);
